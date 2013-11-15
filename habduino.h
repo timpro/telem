@@ -32,57 +32,79 @@
  */
 
 
-int errorstatus=0;
+short errorstatus = 6;
 /* Error Status Bit Level Field :
- Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
- Bit 1 = GPS Error Condition Noted Cold Boot GPS
- Bit 2 = Not used in HABduino
- Bit 3 = Current Dynamic Model 0 = Flight 1 = Pedestrian
- Bit 4 = PSM Status 0 = PSM On 1 = PSM Off                   
- Bit 5 = Lock 0 = GPS Locked 1= Not Locked
+ Bit 0 = Current Dynamic Model 0 = Flight 1 = Pedestrian
+ Bit 1 = PSM Status 0 = PSM On 1 = PSM Off                   
+ Bit 2 = Lock 0 = GPS Locked 1= Not Locked
  
- So error 8 means the everything is fine just the GPS is in pedestrian mode. 
+ So error 1 means the everything is fine just the GPS is in pedestrian mode. 
  Below 1000 meters the code puts the GPS in the more accurate pedestrian mode. 
  Above 2000 meters it switches to dynamic model 6 i.e flight mode
- So as an example error code 40 = 101000 means GPS not locked and in pedestrian mode. 
+ So as an example error code 5 = 101 means GPS not locked and in pedestrian mode. 
  */
 
+void gps_get_data(void);
+void gps_get_time(void);
+void gps_get_position(void);
+void gps_check_nav(void);
+void gps_check_mode(void);
+void gps_check_lock(void);
+void setGPS_PowerSaveMode(void);
+void setGps_MaxPerformanceMode(void);
+void setGPS_DynamicMode6(void);
+short gps_verify_checksum(uint8_t* data, uint8_t len);
+
 uint8_t buf[60]; 
-uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
+uint8_t lock = 0, sats = 0, hour = 0, minute = 0, second = 0;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int GPSerror = 0,navmode = 0,psm_status = 0,lat_int=0,lon_int=0, temperature=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0 ,tslf=0;
 
-void setup()  { 
-  resetGPS();
-  setupGPS();
-} 
+//void setup() { resetGPS(); setupGPS();}
 
-void loop()   {
+void gps_loop() {
+
+  gps_get_time();
+#if 0 // simplify for i2c testing
+  if ( !(++tslf & 15) ) {
+      // should not need to check very often.
+      gps_check_nav();
+      gps_check_mode();
+      // TODO: check performance/powersave setting.
+  }
 
   gps_check_lock();
+
+  // none,guess,2d,*3d*,better guess,time only.
+  if ((lock > 1) && (lock < 5))
+      gps_get_position();
+
   if (lock == 3)
   {
-    gps_get_position();
-    gps_get_time();
-    gps_check_nav();
-    gps_check_model();
-
+    errorstatus &= ~(4);
     // set powersaving mode
-    if( (psm_status == 0) && (sats > 5) && !(errorstatus & 3) )
+    if( (sats > 5) && (errorstatus & (2)) )
     {
       setGPS_PowerSaveMode();
-      psm_status=1;
-      errorstatus &= ~(1 << 4);
+      errorstatus &= ~(2);
     }
+
+    if(alt > maxalt)
+        maxalt = alt;    
+  } else {
+    errorstatus |= 4;
+    if (!(errorstatus & 2)) // powersave and no lock
+      setGps_MaxPerformanceMode();
+    errorstatus |= 2;
   }
 #endif
+}
 
-  if(sats >= 4)
-  {
-    errorstatus &= ~(3);
-    if(alt > maxalt)
-      maxalt = alt;
+void sendUBX(uint8_t *MSG, uint8_t len) {
+  short i;
+  for (i=0; i<len; i++) {
+  //    hal_i2c_write(MSG[i]);
   }
 }
 
@@ -94,14 +116,10 @@ void resetGPS() {
   sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
 }
 
-void sendUBX(uint8_t *MSG, uint8_t len) {};
-//  for(int i=0; i<len; i++) {
-//    Serial.write(MSG[i]);
-
 void setupGPS() {
   // Need to start in Flight Mode for mid-air reboots
   // Can set Portable Mode after getting fix
-  setGPS_DynamicModel6();
+  setGPS_DynamicMode6();
 
   //Turning off all GPS NMEA strings apart on the uBlox module
   // Taken from Project Swift (rather than the old way of sending ascii text)
@@ -114,7 +132,7 @@ void setupGPS() {
   //gps_set_sucess=getUBX_ACK(setNMEAoff);
 }
 
-void setGPS_DynamicModel6()
+void setGPS_DynamicMode6()
 {
   uint8_t setdm6[] = {
     0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06,
@@ -127,7 +145,7 @@ void setGPS_DynamicModel6()
     //gps_set_sucess=getUBX_ACK(setdm6);
 }
 
-void setGPS_DynamicModel3()
+void setGPS_DynamicMode3()
 {
   uint8_t setdm3[] = {
     0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x03,
@@ -149,6 +167,7 @@ void setGps_MaxPerformanceMode() {
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
 
+#if 0
 // Flush i2c before requesting ack
 // may need delay to process request
 boolean getUBX_ACK(uint8_t *MSG) {
@@ -160,7 +179,7 @@ boolean getUBX_ACK(uint8_t *MSG) {
   ackPacket[0] = 0xB5;	// header
   ackPacket[1] = 0x62;	// header
   ackPacket[2] = 0x05;	// class
-  ackPacket[3] = 0x01;	// id
+  ackPacket[3] = 0x01;	// id, may be 0x00 for NAK
   ackPacket[4] = 0x02;	// length
   ackPacket[5] = 0x00;
   ackPacket[6] = MSG[2];	// ACK class
@@ -169,51 +188,41 @@ boolean getUBX_ACK(uint8_t *MSG) {
   ackPacket[9] = 0;		// CK_B
 
   // Calculate the checksums
-  for (uint8_t ubxi=2; ubxi<8; ubxi++) {
-    ackPacket[8] = ackPacket[8] + ackPacket[ubxi];
+  short i;
+  for (i=2; i<8; i++) {
+    ackPacket[8] = ackPacket[8] + ackPacket[i];
     ackPacket[9] = ackPacket[9] + ackPacket[8];
   }
-
-  while (1) {
-
-    // Test for success
-    if (ackByteID > 9) {
-      // All packets in order!
-      return true;
-    }
-
-      // Check that bytes arrive in sequence as per expected ACK packet
-      b = i2c_read;
-      if (b == ackPacket[ackByteID]) { 
-        ackByteID++;
-      } 
-      else
-        return false;
-
-    }
-  }
 }
+#endif
 
-uint16_t gps_CRC16_checksum (char *string)
+uint16_t gps_CRC16_checksum (char *string, short len)
 {
-  size_t i;
-  uint16_t crc;
+  uint16_t crc, i, j;
   uint8_t c;
 
   crc = 0xFFFF;
 
   // Calculate checksum ignoring the first two $s
-  for (i = 5; i < strlen(string); i++)
+  for (i = 5; i < len; i++)
   {
     c = string[i];
-    crc = _crc_xmodem_update (crc, c);
+    //  crc = _crc_xmodem_update (crc, c);
+        crc = crc ^ ((uint16_t)c << 8);
+        for (j=0; j<8; j++)
+        {
+            if (crc & 0x8000)
+                crc = (crc << 1) ^ 0x1021;
+            else
+                crc <<= 1;
+        }
   }
-
   return crc;
 }
 
-uint8_t gps_check_nav(void)
+void gps_check_nav(void)
 {
+  // CFG-NAV5
   uint8_t request[8] = {
     0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84 };
 
@@ -230,7 +239,7 @@ uint8_t gps_check_nav(void)
     GPSerror = 42;
   }
   // Check 40 bytes of message checksum
-  if( !_gps_verify_checksum(&buf[2], 40) ) {
+  if( !gps_verify_checksum(&buf[2], 40) ) {
     GPSerror = 43;
   }
 
@@ -240,28 +249,30 @@ uint8_t gps_check_nav(void)
 
 void gps_get_data()
 {
+  short i;
   // Clear buf[i]
-  for(int i = 0;i<60;i++) 
-  {
-    buf[i] = 0; // clearing buffer  
-  }  
+  for (i = 0; i<60; i++) 
+      buf[i] = 0; // clearing buffer
   // read i2c
 }
-bool _gps_verify_checksum(uint8_t* data, uint8_t len)
+
+void gps_ubx_checksum(uint8_t* data, uint8_t len, uint8_t* cka, uint8_t* ckb);
+short gps_verify_checksum(uint8_t* data, uint8_t len)
 {
   uint8_t a, b;
   gps_ubx_checksum(data, len, &a, &b);
   if( a != *(data + len) || b != *(data + len + 1))
-    return false;
+    return 0;
   else
-    return true;
+    return 1;
 }
-void gps_ubx_checksum(uint8_t* data, uint8_t len, uint8_t* cka,
-uint8_t* ckb)
+
+void gps_ubx_checksum(uint8_t* data, uint8_t len, uint8_t* cka, uint8_t* ckb)
 {
+  short i;
   *cka = 0;
   *ckb = 0;
-  for( uint8_t i = 0; i < len; i++ )
+  for (i = 0; i < len; i++)
   {
     *cka += *data;
     *ckb += *cka;
@@ -272,13 +283,13 @@ uint8_t* ckb)
 void gps_check_mode() {
     if( (navmode != 3) && (alt <1000) )
     {
-      setGPS_DynamicModel3();
-      errorstatus |=(1 << 3);      
+      setGPS_DynamicMode3();
+      errorstatus |= (1);
     }
-    if( (navmode != 6) && alt >2000) )
+    if( (navmode != 6) && (alt >2000) )
     {
-      setGPS_DynamicModel6();
-      errorstatus &= ~(1 << 3);
+      setGPS_DynamicMode6();
+      errorstatus &= ~(1);
     }
 }
 
@@ -294,7 +305,7 @@ void setGPS_PowerSaveMode() {
 void gps_check_lock()
 {
   GPSerror = 0;
-  // Construct the request to the GPS
+  // Construct NAV-SOL request to the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
     0x07, 0x16 };
@@ -312,7 +323,7 @@ void gps_check_lock()
   }
 
   // Check 60 bytes minus SYNC and CHECKSUM (4 bytes)
-  if( !_gps_verify_checksum(&buf[2], 56) ) {
+  if( !gps_verify_checksum(&buf[2], 56) ) {
     GPSerror = 13;
   }
 
@@ -329,6 +340,7 @@ void gps_check_lock()
     lock = 0;
   }
 }
+
 void gps_get_position()
 {
   GPSerror = 0;
@@ -348,39 +360,44 @@ void gps_get_position()
   if( buf[2] != 0x01 || buf[3] != 0x02 )
     GPSerror = 22;
 
-  if( !_gps_verify_checksum(&buf[2], 32) ) {
+  if( !gps_verify_checksum(&buf[2], 32) ) {
     GPSerror = 23;
   }
 
   if(GPSerror == 0) {
-    if(sats<4)
-    {
-      lat=0;
-      lon=0;
-      alt=0;
-    }
-    else
-    {
-      lon = (int32_t)buf[10] | (int32_t)buf[11] << 8 | 
+    lon = (int32_t)buf[10] | (int32_t)buf[11] << 8 | 
         (int32_t)buf[12] << 16 | (int32_t)buf[13] << 24;
-      lat = (int32_t)buf[14] | (int32_t)buf[15] << 8 | 
+    lat = (int32_t)buf[14] | (int32_t)buf[15] << 8 | 
         (int32_t)buf[16] << 16 | (int32_t)buf[17] << 24;
-      alt = (int32_t)buf[22] | (int32_t)buf[23] << 8 | 
+    alt = (int32_t)buf[22] | (int32_t)buf[23] << 8 | 
         (int32_t)buf[24] << 16 | (int32_t)buf[25] << 24;
-    }
-    // 4 bytes of latitude/longitude (1e-7)
-    lon_int=abs(lon/10000000);
-    lon_dec=(labs(lon) % 10000000)/10;
-    lat_int=abs(lat/10000000);
-    lat_dec=(labs(lat) % 10000000)/10;
 
+    // 4 bytes of latitude/longitude (1e-7)
+    // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
+    if (lon < 0) {
+        lon -= 500;
+        lon /= 1000;
+        lon_int = lon / 10000;
+        lon_dec = (lon_int * 10000) - lon;
+    } else {
+        lon += 500;
+        lon /= 1000;
+        lon_int = lon / 10000;
+        lon_dec = lon - (lon_int * 10000);
+    }
+    lat += 500;
+    lat /= 1000;
+    lat_int = lat/10000;
+    lat_dec = lat - (lat_int * 10000);
 
     // 4 bytes of altitude above MSL (mm)
-
-    alt /= 1000; // Correct to meters
+    // Scale to meters (Within accuracy of GPS)
+    alt >>= 8;
+    alt *= 262;
+    alt >>= 10;
   }
-
 }
+
 void gps_get_time()
 {
   GPSerror = 0;
@@ -400,7 +417,7 @@ void gps_get_time()
   if( buf[2] != 0x01 || buf[3] != 0x21 )
     GPSerror = 32;
 
-  if( !_gps_verify_checksum(&buf[2], 24) ) {
+  if( !gps_verify_checksum(&buf[2], 24) ) {
     GPSerror = 33;
   }
 
