@@ -60,7 +60,6 @@ void accel_init(void)
 {
     uint8_t tmp;
 
-    hal_i2c_init(I2C0_B);
     tmp = mma8451_read(CTRL_REG1);
     mma8451_write(CTRL_REG1, tmp | 0x01);       // ACTIVE = 1
 }

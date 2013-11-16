@@ -51,6 +51,9 @@ short baro_temp(void);
 void  mag_init(void);
 short mag_compass(short pitch, short roll);
 
+// From ublox.c
+void ublox_init(void);
+
 // From _startup.c
 void fault(uint32_t pattern);
 #define FAULT_FAST_BLINK 	(0b10101010101010101010101010101010)

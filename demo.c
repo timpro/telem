@@ -17,8 +17,7 @@ int main(void)
 {
     unsigned int pat;
     short ax, ay, az;
-    short tx, ty, tz;
-    short t1, t2, temp;
+    short int_temp;
     short red, green, blue;
     short pitch, roll;
     short compass;
@@ -28,7 +27,8 @@ int main(void)
 
     // Initialize all modules
     uart_init(115200);
-    hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox
+    hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox or 8451
+    ublox_init();
 //    hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
 //    accel_init();
 //    baro_init();
@@ -38,7 +38,7 @@ int main(void)
     // Unused here, but necessary.
     heap_end = _sbrk(0);
 
-    RGB_LED( 0, 40, 0 );
+    RGB_LED( 100, 0, 0 );
     delay( 100 );
     // Welcome banner
     iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
@@ -50,19 +50,12 @@ int main(void)
 	pat = 1 << 7;
 	while (pat) {
 		accel_read();
-		// Oversample acceleration to steady compass
-		tx = accel_x();
-		ax = (ax + tx) >> 1;
-		ty = accel_y();
-		ay = (ay + ty) >> 1;
-		tz = accel_z();
-		az = (az + tz) >> 1;
+		ax = accel_x();
+		ay = accel_y();
+		az = accel_z();
 		force = magnitude( ax, ay, az );
 		pitch = findArctan( ax, ay, az );
 		roll  = findArctan( az, ay, 0 );
-		ax = tx;
-		ay = ty;
-		az = tz;
 		force += (force >> 1) + (force >> 4);
 		force >>= 6; // force as percentage of 1G
 
@@ -80,13 +73,13 @@ int main(void)
 		RGB_LED( red, green, blue );
 
 		pat >>= 1;
-		delay(120);
+		delay(125);
 	}
 
 //	pressure = get_pressure();
-//	temp = baro_temp();
+//	int_temp = baro_temp();
 //	compass = mag_compass(pitch, roll);
 //	iprintf("$$HEX,%d,%3d,%3d,%3d,",seq++, force, pitch, roll);
-//	iprintf("%3d,%d0,%d,*%x\r\n", compass, pressure, temp, checksum);
+//	iprintf("%3d,%d0,%d,*%x\r\n", compass, pressure, int_temp, checksum);
     }
 }
