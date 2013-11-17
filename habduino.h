@@ -53,13 +53,13 @@ void gps_check_lock(void);
 void setGPS_PowerSaveMode(void);
 void setGps_MaxPerformanceMode(void);
 void setGPS_DynamicMode6(void);
-short gps_verify_checksum(uint8_t* data, uint8_t len);
+void sendUBX(uint8_t *MSG, uint8_t len);
+short gps_verify_checksum(char* data, short len);
 
-uint8_t buf[60]; 
-uint8_t lock = 0, sats = 0, hour = 0, minute = 0, second = 0;
-uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
-int GPSerror = 0,navmode = 0,psm_status = 0,lat_int=0,lon_int=0, temperature=0;
-int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0 ,tslf=0;
+char  buf[64]; 
+char  lock = 0, sats = 0, hour = 0, minute = 0, second = 0, tslf;
+short GPSerror = 0, navmode = 0, psm_status = 0, lat_int = 0, lon_int = 0;
+long  lat = 0, lon = 0, alt = 0, maxalt = -1, lat_dec = 0, lon_dec = 0;
 
 //void setup() { resetGPS(); setupGPS();}
 
@@ -99,13 +99,6 @@ void gps_loop() {
     errorstatus |= 2;
   }
 #endif
-}
-
-void sendUBX(uint8_t *MSG, uint8_t len) {
-  short i;
-  for (i=0; i<len; i++) {
-  //    hal_i2c_write(MSG[i]);
-  }
 }
 
 void resetGPS() {
@@ -256,10 +249,10 @@ void gps_get_data()
   // read i2c
 }
 
-void gps_ubx_checksum(uint8_t* data, uint8_t len, uint8_t* cka, uint8_t* ckb);
-short gps_verify_checksum(uint8_t* data, uint8_t len)
+void gps_ubx_checksum(char* data, short len, char* cka, char* ckb);
+short gps_verify_checksum(char* data, short len)
 {
-  uint8_t a, b;
+  char a, b;
   gps_ubx_checksum(data, len, &a, &b);
   if( a != *(data + len) || b != *(data + len + 1))
     return 0;
@@ -267,7 +260,7 @@ short gps_verify_checksum(uint8_t* data, uint8_t len)
     return 1;
 }
 
-void gps_ubx_checksum(uint8_t* data, uint8_t len, uint8_t* cka, uint8_t* ckb)
+void gps_ubx_checksum(char* data, short len, char* cka, char* ckb)
 {
   short i;
   *cka = 0;

@@ -29,8 +29,8 @@ int main(void)
     uart_init(115200);
     hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox or 8451
     ublox_init();
-//    hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
-//    accel_init();
+    hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
+    accel_init();
 //    baro_init();
 //    mag_init();
     setvbuf(stdin, NULL, _IONBF, 0);        // No buffering
@@ -79,7 +79,8 @@ int main(void)
 //	pressure = get_pressure();
 //	int_temp = baro_temp();
 //	compass = mag_compass(pitch, roll);
-//	iprintf("$$HEX,%d,%3d,%3d,%3d,",seq++, force, pitch, roll);
+	iprintf("$$HEX,%d,%3d,%3d,%3d,",seq++, force, pitch, roll);
+	iprintf("%d\r\n", ublox_test() );
 //	iprintf("%3d,%d0,%d,*%x\r\n", compass, pressure, int_temp, checksum);
     }
 }
