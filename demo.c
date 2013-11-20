@@ -16,6 +16,7 @@ static char *heap_end;
 int main(void)
 {
     unsigned int pat;
+    long time;
     short ax, ay, az;
     short int_temp;
     short red, green, blue;
@@ -43,11 +44,11 @@ int main(void)
     // Welcome banner
     iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    iprintf("Ident, Count, force,pitch,roll, mag field, pressure,temp *Chksum\r\n");
+    iprintf("Ident, Count, time, force, mag field, pressure, temp *Chksum\r\n");
 
     ax = ay = az = 0;
     for(;;) {
-	pat = 1 << 15;
+	pat = 1 << 23;
 	while (pat) {
 		accel_read();
 		ax = accel_x();
@@ -73,14 +74,15 @@ int main(void)
 		RGB_LED( red, green, blue );
 
 		pat >>= 1;
-		delay(125);
+		delay(128);
 
 	}
 
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
-	iprintf("$$HEX,%d,%3d,",seq++, force);
-	iprintf("%3d,%d,%d,*%x\r\n", compass, pressure, int_temp, checksum);
+	time = my_time();
+	iprintf("$$HEX,%d,%d,%d,",seq++, time, force);
+	iprintf("%d,%d,%d,*%x\r\n", compass, pressure, int_temp, checksum);
     }
 }

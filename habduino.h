@@ -111,10 +111,6 @@ void resetGPS() {
 }
 
 void setupGPS() {
-  // Need to start in Flight Mode for mid-air reboots
-  // Can set Portable Mode after getting fix
-  setGPS_DynamicMode6();
-
   //Turning off all GPS NMEA strings apart on the uBlox module
   // Taken from Project Swift (rather than the old way of sending ascii text)
   uint8_t setNMEAoff[] = {
@@ -160,35 +156,6 @@ void setGps_MaxPerformanceMode() {
 
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
-
-#if 0
-// Flush i2c before requesting ack
-// may need delay to process request
-boolean getUBX_ACK(uint8_t *MSG) {
-  uint8_t b;
-  uint8_t ackByteID = 0;
-  uint8_t ackPacket[10];
-
-  // Construct the expected ACK packet    
-  ackPacket[0] = 0xB5;	// header
-  ackPacket[1] = 0x62;	// header
-  ackPacket[2] = 0x05;	// class
-  ackPacket[3] = 0x01;	// id, may be 0x00 for NAK
-  ackPacket[4] = 0x02;	// length
-  ackPacket[5] = 0x00;
-  ackPacket[6] = MSG[2];	// ACK class
-  ackPacket[7] = MSG[3];	// ACK id
-  ackPacket[8] = 0;		// CK_A
-  ackPacket[9] = 0;		// CK_B
-
-  // Calculate the checksums
-  short i;
-  for (i=2; i<8; i++) {
-    ackPacket[8] = ackPacket[8] + ackPacket[i];
-    ackPacket[9] = ackPacket[9] + ackPacket[8];
-  }
-}
-#endif
 
 uint16_t gps_CRC16_checksum (char *string, short len)
 {

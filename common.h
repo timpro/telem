@@ -30,6 +30,7 @@ int uart_write(char *p, int len);
 int uart_write_err(char *p, int len);
 int uart_read(char *p, int len);
 void uart_init(int baud_rate);
+void uart_empty(char *buf);
 
 // From delay.c
 void delay(unsigned int ms);
@@ -53,7 +54,7 @@ short mag_compass(short pitch, short roll);
 
 // From ublox.c
 void ublox_init(void);
-short ublox_test(void);
+long my_time(void);
 
 // From _startup.c
 void fault(uint32_t pattern);

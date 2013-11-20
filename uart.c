@@ -29,7 +29,7 @@ void UART0_IRQHandler()
         if(buf_isempty(tx_buffer))
             UART0_C2 &= ~UART_C2_TIE_MASK;
     }
-#if 0 
+#if 1 
     // If there is received data, read it into the receive buffer.  If the
     // buffer is full, disable the receive interrupt.
     if ((status & UART_S1_RDRF_MASK) && !buf_isfull(rx_buffer)) {
@@ -88,6 +88,16 @@ int uart_read(char *p, int len)
         i--;
     }
     return len - i;
+}
+
+// non-blocking read for 60 bytes of ublox data
+void uart_empty(char *p)
+{
+	short i = 0;
+	while ( (i++ < 60) && !buf_isempty(rx_buffer) )
+		*p++ = buf_get_byte(rx_buffer);
+
+	UART0_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt
 }
 
 //
