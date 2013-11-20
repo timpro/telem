@@ -53,6 +53,7 @@ short mag_compass(short pitch, short roll);
 
 // From ublox.c
 void ublox_init(void);
+short ublox_test(void);
 
 // From _startup.c
 void fault(uint32_t pattern);

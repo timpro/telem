@@ -29,7 +29,7 @@ void UART0_IRQHandler()
         if(buf_isempty(tx_buffer))
             UART0_C2 &= ~UART_C2_TIE_MASK;
     }
-    
+#if 0 
     // If there is received data, read it into the receive buffer.  If the
     // buffer is full, disable the receive interrupt.
     if ((status & UART_S1_RDRF_MASK) && !buf_isfull(rx_buffer)) {
@@ -37,6 +37,13 @@ void UART0_IRQHandler()
         if(buf_isfull(rx_buffer))
             UART0_C2 &= ~UART_C2_RIE_MASK;
     }
+#else
+    // If there is received data, paste it into the transmit buffer. 
+    if ((status & UART_S1_RDRF_MASK) && !buf_isfull(tx_buffer)) {
+	buf_put_byte(tx_buffer, UART0_D);
+        UART0_C2 |= UART_C2_TIE_MASK;
+    }
+#endif
 }
 
 int uart_write(char *p, int len)
@@ -98,8 +105,9 @@ void uart_init(int baud_rate)
     SIM_SOPT2 |= SIM_SOPT2_UART0SRC(1);                 // FLL/PLL source
 
     // Select "Alt 2" usage to enable UART0 on pins
-    PORTA_PCR1 = PORT_PCR_MUX(2);
-    PORTA_PCR2 = PORT_PCR_MUX(2);
+    // Select "Alt 1" to disable OpenSDA from uart
+    PORTA_PCR1 = PORT_PCR_MUX(1); //rx
+    PORTA_PCR2 = PORT_PCR_MUX(2); //tx
 
     UART0_C2 = 0;
     UART0_C1 = 0;

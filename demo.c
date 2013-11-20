@@ -26,13 +26,13 @@ int main(void)
     unsigned short seq = 100;
 
     // Initialize all modules
-    uart_init(115200);
-    hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox or 8451
-    ublox_init();
+    uart_init(9600);
+    //hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox or 8451
     hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
     accel_init();
-//    baro_init();
-//    mag_init();
+    baro_init();
+    mag_init();
+    ublox_init();
     setvbuf(stdin, NULL, _IONBF, 0);        // No buffering
 
     // Unused here, but necessary.
@@ -47,7 +47,7 @@ int main(void)
 
     ax = ay = az = 0;
     for(;;) {
-	pat = 1 << 7;
+	pat = 1 << 15;
 	while (pat) {
 		accel_read();
 		ax = accel_x();
@@ -74,13 +74,13 @@ int main(void)
 
 		pat >>= 1;
 		delay(125);
+
 	}
 
-//	pressure = get_pressure();
-//	int_temp = baro_temp();
-//	compass = mag_compass(pitch, roll);
-	iprintf("$$HEX,%d,%3d,%3d,%3d,",seq++, force, pitch, roll);
-	iprintf("%d\r\n", ublox_test() );
-//	iprintf("%3d,%d0,%d,*%x\r\n", compass, pressure, int_temp, checksum);
+	compass = mag_compass(pitch, roll);
+	pressure = get_pressure();
+	int_temp = baro_temp();
+	iprintf("$$HEX,%d,%3d,",seq++, force);
+	iprintf("%3d,%d,%d,*%x\r\n", compass, pressure, int_temp, checksum);
     }
 }

@@ -1,4 +1,6 @@
 /*
+ (c) 2013 John Greb, using GPL code from Project Habduino
+
  HABDuino Tracker
  http://www.habduino.org
  (c) Anthony Stirk M0UPU 
@@ -39,9 +41,8 @@ short errorstatus = 6;
  Bit 2 = Lock 0 = GPS Locked 1= Not Locked
  
  So error 1 means the everything is fine just the GPS is in pedestrian mode. 
- Below 1000 meters the code puts the GPS in the more accurate pedestrian mode. 
+ Below  500 meters the code puts the GPS in the more accurate pedestrian mode. 
  Above 2000 meters it switches to dynamic model 6 i.e flight mode
- So as an example error code 5 = 101 means GPS not locked and in pedestrian mode. 
  */
 
 void gps_get_data(void);
@@ -58,8 +59,8 @@ short gps_verify_checksum(char* data, short len);
 
 char  buf[64]; 
 char  lock = 0, sats = 0, hour = 0, minute = 0, second = 0, tslf;
-short GPSerror = 0, navmode = 0, psm_status = 0, lat_int = 0, lon_int = 0;
-long  lat = 0, lon = 0, alt = 0, maxalt = -1, lat_dec = 0, lon_dec = 0;
+short GPSerror = 0, navmode = 0, psm_status = 0, lat_int = 51, lon_int = -4;
+short altitude = 501, lat_dec = 0, lon_dec = 0;
 
 //void setup() { resetGPS(); setupGPS();}
 
@@ -226,27 +227,18 @@ void gps_check_nav(void)
 
   // Verify sync and header bytes
   if( buf[0] != 0xB5 || buf[1] != 0x62 ){
-    GPSerror = 41;
+    GPSerror = 10;
   }
   if( buf[2] != 0x06 || buf[3] != 0x24 ){
-    GPSerror = 42;
+    GPSerror = 20;
   }
   // Check 40 bytes of message checksum
   if( !gps_verify_checksum(&buf[2], 40) ) {
-    GPSerror = 43;
+    GPSerror = 30;
   }
 
   // Return the navigation mode and let the caller analyse it
   navmode = buf[8];
-}
-
-void gps_get_data()
-{
-  short i;
-  // Clear buf[i]
-  for (i = 0; i<60; i++) 
-      buf[i] = 0; // clearing buffer
-  // read i2c
 }
 
 void gps_ubx_checksum(char* data, short len, char* cka, char* ckb);
@@ -274,25 +266,45 @@ void gps_ubx_checksum(char* data, short len, char* cka, char* ckb)
 }
 
 void gps_check_mode() {
-    if( (navmode != 3) && (alt <1000) )
+    if( (navmode != 3) && (altitude <500) )
     {
       setGPS_DynamicMode3();
       errorstatus |= (1);
     }
-    if( (navmode != 6) && (alt >2000) )
+    if( (navmode != 6) && (altitude >2000) )
     {
       setGPS_DynamicMode6();
       errorstatus &= ~(1);
     }
 }
 
-void setGPS_PowerSaveMode() {
-  // Power Save Mode 
+void setGPS_PowerSaveMode()
+{
   uint8_t setPSM[] = { 
     0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22,
-    0x92 }; // Setup for Power Save Mode (Default Cyclic 1s)
+    0x92 }; // CFG-RXM Power Save Mode (Default Cyclic 1s)
 
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
+}
+
+// Sleeps often, keep waking it up.
+void ublox_i2c_on()
+{
+  uint8_t setON[] = {
+    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00,             // 6 header bytes
+    0x00, 0x00, 0x00, 0x00, 0x84, 0x00, 0x00, 0x00, // slave address
+    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, // ubx in and out
+    0x02, 0x00, 0x00, 0x00,                         // extended on time
+    0x00, 0x00 };          // 20 bytes + 2 checksum
+
+  // Calculate the checksums
+  short i;
+  for (i=2; i < 26; i++) {
+    setON[26] += setON[i];
+    setON[27] += setON[26];
+  }
+
+  sendUBX(setON, sizeof(setON)/sizeof(uint8_t));
 }
 
 void gps_check_lock()
@@ -300,8 +312,7 @@ void gps_check_lock()
   GPSerror = 0;
   // Construct NAV-SOL request to the GPS
   uint8_t request[8] = {
-    0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
-    0x07, 0x16 };
+    0xB5, 0x62, 0x01, 0x06, 0x00, 0x00, 0x07, 0x16 };
 
   sendUBX(request, 8);
 
@@ -309,15 +320,15 @@ void gps_check_lock()
   gps_get_data();
   // Verify the sync and header bits
   if( buf[0] != 0xB5 || buf[1] != 0x62 ) {
-    GPSerror = 11;
+    GPSerror = 10;
   }
   if( buf[2] != 0x01 || buf[3] != 0x06 ) {
-    GPSerror = 12;
+    GPSerror = 20;
   }
 
   // Check 60 bytes minus SYNC and CHECKSUM (4 bytes)
   if( !gps_verify_checksum(&buf[2], 56) ) {
-    GPSerror = 13;
+    GPSerror = 30;
   }
 
   if(GPSerror == 0){
@@ -336,6 +347,7 @@ void gps_check_lock()
 
 void gps_get_position()
 {
+  long lat, lon, alt;
   GPSerror = 0;
   // Request a NAV-POSLLH message from the GPS
   uint8_t request[8] = {
@@ -349,45 +361,46 @@ void gps_get_position()
 
   // Verify the sync and header bits
   if( buf[0] != 0xB5 || buf[1] != 0x62 )
-    GPSerror = 21;
+    GPSerror = 10;
   if( buf[2] != 0x01 || buf[3] != 0x02 )
-    GPSerror = 22;
+    GPSerror = 20;
 
   if( !gps_verify_checksum(&buf[2], 32) ) {
-    GPSerror = 23;
+    GPSerror = 30;
   }
 
   if(GPSerror == 0) {
-    lon = (int32_t)buf[10] | (int32_t)buf[11] << 8 | 
-        (int32_t)buf[12] << 16 | (int32_t)buf[13] << 24;
-    lat = (int32_t)buf[14] | (int32_t)buf[15] << 8 | 
-        (int32_t)buf[16] << 16 | (int32_t)buf[17] << 24;
-    alt = (int32_t)buf[22] | (int32_t)buf[23] << 8 | 
-        (int32_t)buf[24] << 16 | (int32_t)buf[25] << 24;
 
+    lon = 0 | buf[11]<< 8 | buf[12] << 16 | buf[13] << 24;
     // 4 bytes of latitude/longitude (1e-7)
     // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
     if (lon < 0) {
         lon -= 500;
         lon /= 1000;
-        lon_int = lon / 10000;
-        lon_dec = (lon_int * 10000) - lon;
+        lon_int = (short) (lon / 10000);
+        lon_dec = (short) ((long)lon_int*10000 - lon);
     } else {
         lon += 500;
         lon /= 1000;
-        lon_int = lon / 10000;
-        lon_dec = lon - (lon_int * 10000);
+        lon_int = (short) (lon / 10000);
+        lon_dec = (short) (lon - (long)lon_int*10000);
     }
+
+    lat = 0 | buf[15]<< 8 | buf[16] << 16 | buf[17] << 24;
+    // may be less than zero, which would be bad
     lat += 500;
     lat /= 1000;
-    lat_int = lat/10000;
-    lat_dec = lat - (lat_int * 10000);
+    lat_int = (short) (lat/10000);
+    lat_dec = (short) (lat - (long)lat_int*10000) ;
 
     // 4 bytes of altitude above MSL (mm)
+    // Ignore low byte, but data is signed
+    alt = 0 | buf[23]<< 8 | buf[24] << 16 | buf[25] << 24;
+
     // Scale to meters (Within accuracy of GPS)
     alt >>= 8;
-    alt *= 262;
-    alt >>= 10;
+    alt *= 2097;
+    altitude = (short) (alt >> 13);
   }
 }
 
@@ -406,18 +419,18 @@ void gps_get_time()
 
   // Verify the sync and header bits
   if( buf[0] != 0xB5 || buf[1] != 0x62 )
-    GPSerror = 31;
+    GPSerror = 10;
   if( buf[2] != 0x01 || buf[3] != 0x21 )
-    GPSerror = 32;
+    GPSerror = 20;
 
   if( !gps_verify_checksum(&buf[2], 24) ) {
-    GPSerror = 33;
+    GPSerror = 30;
   }
 
   if(GPSerror == 0) {
     if(buf[22] > 23 || buf[23] > 59 || buf[24] > 60)
     {
-      GPSerror = 34;
+      GPSerror = 40;
     }
     else {
       hour = buf[22];

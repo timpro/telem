@@ -71,7 +71,7 @@ int16_t _read_reg14(int reg)
 }
 
 // Stub for compatability, this chip reads continuously
-void accel_read(void);
+void accel_read(void){};
 
 // Read acceleration values for each axis
 int16_t accel_x(void) {return _read_reg14(0x01);}
