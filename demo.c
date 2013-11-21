@@ -22,6 +22,7 @@ int main(void)
     short red, green, blue;
     short pitch, roll;
     short compass;
+    short lat, lon, alt, sats;
     unsigned short force, pressure;
     unsigned short checksum = 0xdead;
     unsigned short seq = 100;
@@ -43,7 +44,7 @@ int main(void)
     // Welcome banner
     iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    iprintf("Ident, Count, time, force, mag field, pressure, temp *Chksum\r\n");
+    iprintf("Ident, Count, time, lat, lon, alt, sats, G, mag field, pressure, temp *Chksum\r\n");
 
     for(;;) {
 	pat = 1 << 23;
@@ -80,9 +81,14 @@ int main(void)
 	pressure = get_pressure();
 	int_temp = baro_temp();
 	time = ublox_time();
+	lon = gps_lon();
+	lat = gps_lat();
+	alt = gps_alt();
+	sats = ublox_sats();
 	ublox_update();
-	iprintf("$$HEX,%d,%2d:%2d:%2d,%d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63, force);
-	iprintf("%d,%d,%d*%x\r\n", compass, pressure, int_temp, checksum);
+	iprintf("$$HEX,%d,%2d%2d%2d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
+	iprintf("%d,%d,%d,", lat, lon, alt);
+	iprintf("%d,%d,%d,%d,%d*%x\r\n", sats, force, compass, pressure, int_temp, checksum);
 
     }
 }

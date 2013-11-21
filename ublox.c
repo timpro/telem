@@ -5,6 +5,8 @@
 //
 // Code in habduino.h subject to GPL licence
 
+long lat, lon;
+
 #include "common.h"
 #include "habduino.h"
 
@@ -39,7 +41,7 @@ void ublox_init(void)
         PORTE_PCR21 = PORT_PCR_MUX(4); //rx
 }
 
-void sendUBX(uint8_t *data, uint8_t len )
+void sendUBX(char *data, char len )
 {
 	char wakeup = 0xff;
 	//need to wake ublox, then wait 100ms (or 500?)

@@ -18,16 +18,10 @@ static RingBuffer *const tx_buffer = (RingBuffer *) &_tx_buffer;
 static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
 
 // Buffers for Ublox replies
-char NAV_time[28];
-//    0xB5, 0x62, 0x01, 0x21, 0x14, 0x00,             // 6 header
-//    ....0x00, 0x00, 0x00, 0x00,                     // hour,min,sec,flags
-//    0x00, 0x00 };          // 20 bytes + 2 checksum
-char NAV_PVT[86];  //everything you need in one function.
-//    0xB5, 0x62, 0x01, 0x07, 0x54, 0x00,             // 6 header,
-//    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // time,year,month,day
-//    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // hour, min, sec, flags, accuracy
-//  ....    0x00, 0x00 };          //  + 84 bytes + 2 checksum
-char overflow[4];
+char NAV_PVT[92];  //everything you need in one function.
+	//    0xB5, 0x62, 0x01, 0x07, 0x54, 0x00,             // 6 header,
+	//    ....        0x00, 0x00 };          //  + 84 bytes + 2 checksum
+
 /* CRITICAL Section, do not break */
 // 9600 baud is quite slow: data processing needs to be done in the background
 // so that all data can be captured without waiting, discarding or overwriting.
@@ -95,6 +89,26 @@ void UART0_IRQHandler()
 long ublox_time()
 {
 	return (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
+}
+
+long ublox_lon()
+{
+	return (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
+}
+
+long ublox_lat()
+{
+	return (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
+}
+
+long ublox_alt()
+{
+	return (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
+}
+
+short ublox_sats()
+{
+	return (0 | NAV_PVT[23]);
 }
 
 int uart_write(char *p, int len)
