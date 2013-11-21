@@ -181,33 +181,6 @@ uint16_t gps_CRC16_checksum (char *string, short len)
   return crc;
 }
 
-void gps_check_nav(void)
-{
-  // CFG-NAV5
-  uint8_t request[8] = {
-    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84 };
-
-  sendUBX(request, 8);
-
-  // Get the message back from the GPS
-  gps_get_data();
-
-  // Verify sync and header bytes
-  if( buf[0] != 0xB5 || buf[1] != 0x62 ){
-    GPSerror = 10;
-  }
-  if( buf[2] != 0x06 || buf[3] != 0x24 ){
-    GPSerror = 20;
-  }
-  // Check 40 bytes of message checksum
-  if( !gps_verify_checksum(&buf[2], 40) ) {
-    GPSerror = 30;
-  }
-
-  // Return the navigation mode and let the caller analyse it
-  navmode = buf[8];
-}
-
 void gps_ubx_checksum(char* data, short len, char* cka, char* ckb);
 short gps_verify_checksum(char* data, short len)
 {
@@ -254,77 +227,19 @@ void setGPS_PowerSaveMode()
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
-// Sleeps often, keep waking it up.
-void ublox_i2c_on()
-{
-  uint8_t setON[] = {
-    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00,             // 6 header bytes
-    0x00, 0x00, 0x00, 0x00, 0x84, 0x00, 0x00, 0x00, // slave address
-    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, // ubx in and out
-    0x02, 0x00, 0x00, 0x00,                         // extended on time
-    0x00, 0x00 };          // 20 bytes + 2 checksum
-
-  // Calculate the checksums
-  short i;
-  for (i=2; i < 26; i++) {
-    setON[26] += setON[i];
-    setON[27] += setON[26];
-  }
-
-  sendUBX(setON, sizeof(setON)/sizeof(uint8_t));
-}
-
-void gps_check_lock()
-{
-  GPSerror = 0;
-  // Construct NAV-SOL request to the GPS
-  uint8_t request[8] = {
-    0xB5, 0x62, 0x01, 0x06, 0x00, 0x00, 0x07, 0x16 };
-
-  sendUBX(request, 8);
-
-  // Get the message back from the GPS
-  gps_get_data();
-  // Verify the sync and header bits
-  if( buf[0] != 0xB5 || buf[1] != 0x62 ) {
-    GPSerror = 10;
-  }
-  if( buf[2] != 0x01 || buf[3] != 0x06 ) {
-    GPSerror = 20;
-  }
-
-  // Check 60 bytes minus SYNC and CHECKSUM (4 bytes)
-  if( !gps_verify_checksum(&buf[2], 56) ) {
-    GPSerror = 30;
-  }
-
-  if(GPSerror == 0){
-    // Return the value if GPSfixOK is set in 'flags'
-    if( buf[17] & 0x01 )
-      lock = buf[16];
-    else
-      lock = 0;
-
-    sats = buf[53];
-  }
-  else {
-    lock = 0;
-  }
-}
-
-void gps_get_position()
+void ublox_pvt()
 {
   long lat, lon, alt;
   GPSerror = 0;
-  // Request a NAV-POSLLH message from the GPS
-  uint8_t request[8] = {
-    0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
-    0x0A };
+  // Request a NAV-PVT message from the GPS
+  char request[8] = {
+    0xB5, 0x62, 0x01, 0x07, 0x00, 0x00, 0x08, 0x19 };
 
   sendUBX(request, 8);
 
+  return;
+
   // Get the message back from the GPS
-  gps_get_data();
 
   // Verify the sync and header bits
   if( buf[0] != 0xB5 || buf[1] != 0x62 )
@@ -382,7 +297,6 @@ void gps_get_time()
   sendUBX(request, 8);
 
   // Get the message back from the GPS
-  gps_get_data();
 
   // Verify the sync and header bits
   if( buf[0] != 0xB5 || buf[1] != 0x62 )

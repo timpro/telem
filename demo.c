@@ -28,7 +28,6 @@ int main(void)
 
     // Initialize all modules
     uart_init(9600);
-    //hal_i2c_init(I2C0_BASE_PTR);	// Setup I2C for ublox or 8451
     hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
     accel_init();
     baro_init();
@@ -46,7 +45,6 @@ int main(void)
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
     iprintf("Ident, Count, time, force, mag field, pressure, temp *Chksum\r\n");
 
-    ax = ay = az = 0;
     for(;;) {
 	pat = 1 << 23;
 	while (pat) {
@@ -81,8 +79,10 @@ int main(void)
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
-	time = my_time();
-	iprintf("$$HEX,%d,%d,%d,",seq++, time, force);
-	iprintf("%d,%d,%d,*%x\r\n", compass, pressure, int_temp, checksum);
+	time = ublox_time();
+	ublox_update();
+	iprintf("$$HEX,%d,%2d:%2d:%2d,%d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63, force);
+	iprintf("%d,%d,%d*%x\r\n", compass, pressure, int_temp, checksum);
+
     }
 }

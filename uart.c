@@ -2,6 +2,7 @@
 // uart.c -- Serial I/O
 //
 //  Copyright (c) 2012-2013 Andrew Payne <andy@payne.org>
+//  Copyright (c) 2013 John Greb
 //
 
 #include <freedom.h>
@@ -16,10 +17,35 @@ static uint8_t _rx_buffer[sizeof(RingBuffer) + BUFLEN] __attribute__ ((aligned(4
 static RingBuffer *const tx_buffer = (RingBuffer *) &_tx_buffer;
 static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
 
+// Buffers for Ublox replies
+char NAV_time[28];
+//    0xB5, 0x62, 0x01, 0x21, 0x14, 0x00,             // 6 header
+//    ....0x00, 0x00, 0x00, 0x00,                     // hour,min,sec,flags
+//    0x00, 0x00 };          // 20 bytes + 2 checksum
+char NAV_PVT[86];  //everything you need in one function.
+//    0xB5, 0x62, 0x01, 0x07, 0x54, 0x00,             // 6 header,
+//    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // time,year,month,day
+//    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // hour, min, sec, flags, accuracy
+//  ....    0x00, 0x00 };          //  + 84 bytes + 2 checksum
+char overflow[4];
+/* CRITICAL Section, do not break */
+// 9600 baud is quite slow: data processing needs to be done in the background
+// so that all data can be captured without waiting, discarding or overwriting.
+// BUT interrupts need to be short and simple :
+// Reads are filtered into specific buffers, with minimum processing.
+// 
+/* Interrupt States:
+ *	0: waiting for header
+ *	1,2: got 0xB5,0x62
+ *	3,4: checked headerID
+ *	5: checked size byte
+ *	6: read that many bytes + 2 for checksum
+ */
+short pos, type, count;
 void UART0_IRQHandler()
 {
     int status;
-    
+    char inbyte;
     status = UART0_S1;
     
     // If transmit data register empty, and data in the transmit buffer,
@@ -29,21 +55,46 @@ void UART0_IRQHandler()
         if(buf_isempty(tx_buffer))
             UART0_C2 &= ~UART_C2_TIE_MASK;
     }
-#if 1 
-    // If there is received data, read it into the receive buffer.  If the
-    // buffer is full, disable the receive interrupt.
-    if ((status & UART_S1_RDRF_MASK) && !buf_isfull(rx_buffer)) {
-        buf_put_byte(rx_buffer, UART0_D);
-        if(buf_isfull(rx_buffer))
-            UART0_C2 &= ~UART_C2_RIE_MASK;
+
+    // If there is received data, process it. Interrupts are NOT disabled, be quick 
+    if ( status & UART_S1_RDRF_MASK ) {
+        inbyte = UART0_D;
+        //UART0_C2 &= ~UART_C2_RIE_MASK;
+	switch (pos) {
+		case 0: if (0xB5 == inbyte) pos++;
+			break;
+		case 1: if (0x62 == inbyte) pos++;
+			  else pos = 0;
+			break;
+		case 2: if (0x01 == inbyte) pos++;
+			  else pos = 0;
+			break;
+		case 3: if (0x07 == inbyte) pos++;
+			  else pos = 0;
+			break;
+		case 4: if (0x54 == inbyte) {
+				pos++;
+				type = 0;
+			} else pos = 0;
+			break;
+		case 5: if (0x00 == inbyte) {
+					pos++;
+					count = 0;
+			} else pos = 0;
+			break;
+		case 6: NAV_PVT[count++] = inbyte;
+			if (count >= 84) pos = 0;
+			// on error, last byte here may be 0xB5 restart.
+			break;
+		default:pos = 0;
+			break;
+	}
     }
-#else
-    // If there is received data, paste it into the transmit buffer. 
-    if ((status & UART_S1_RDRF_MASK) && !buf_isfull(tx_buffer)) {
-	buf_put_byte(tx_buffer, UART0_D);
-        UART0_C2 |= UART_C2_TIE_MASK;
-    }
-#endif
+}
+
+long ublox_time()
+{
+	return (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
 }
 
 int uart_write(char *p, int len)

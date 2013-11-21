@@ -8,23 +8,14 @@
 #include "common.h"
 #include "habduino.h"
 
-long my_time()
+void ublox_update(void)
 {
-	long now_time = 0;
 	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
 	PORTE_PCR20 = PORT_PCR_MUX(4); // ublox on
-	uart_empty(buf);
-	gps_get_time();
-	now_time = hour * 10000 + minute * 100 + second;
+	ublox_pvt();
+	delay( 128 ); 
 	PORTE_PCR20 = PORT_PCR_MUX(1); // ublox off
 	PORTA_PCR2 =  PORT_PCR_MUX(2); // usb on
-	return now_time;
-}
-void gps_get_data()
-{
-	// short delay for processing, then read
-	delay(128);  
-	uart_empty(buf);
 }
 
 void ublox_init(void)
@@ -43,7 +34,7 @@ void ublox_init(void)
 	setGPS_PowerSaveMode(); // Don`t really want this too soon.
 
 	// allow Uart to empty queue, then switch Ublox to send.
-	delay( 100 );
+	delay( 128 );
         PORTE_PCR20 = PORT_PCR_MUX(1); //tx
         PORTE_PCR21 = PORT_PCR_MUX(4); //rx
 }
