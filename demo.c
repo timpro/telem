@@ -44,7 +44,7 @@ int main(void)
     // Welcome banner
     iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    iprintf("Ident, Count, time, lat, lon, alt, sats, G, mag field, pressure, temp *Chksum\r\n");
+    iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, mag field, pressure, temp *Chksum\r\n");
 
     for(;;) {
 	pat = 1 << 23;
@@ -80,15 +80,15 @@ int main(void)
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
-	time = ublox_time();
+	time = gps_time();
 	lon = gps_lon();
 	lat = gps_lat();
 	alt = gps_alt();
-	sats = ublox_sats();
-	ublox_update();
-	iprintf("$$HEX,%d,%2d%2d%2d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
-	iprintf("%d,%d,%d,", lat, lon, alt);
-	iprintf("%d,%d,%d,%d,%d*%x\r\n", sats, force, compass, pressure, int_temp, checksum);
+	sats = gps_sats();
+	gps_update();
+	iprintf("$$HEX,%d,%02d%02d%02d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
+	iprintf("%04d,%04d,%d,%d,%d,", lat, lon, alt, sats, gps_error() );
+	iprintf("%d,%d,%d,%d*%x\r\n", force, compass, pressure, int_temp, checksum);
 
     }
 }

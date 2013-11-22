@@ -53,12 +53,16 @@ short mag_compass(short pitch, short roll);
 
 // From ublox.c
 void ublox_init(void);
-void ublox_update(void);
+short ublox_update(void);
 long ublox_time(void);
+void gps_update(void);
 short ublox_sats(void);
 short gps_lon(void);
 short gps_lat(void);
 short gps_alt(void);
+long  gps_time(void);
+short gps_sats(void);
+short gps_error(void);
 long ublox_lon(void);
 long ublox_lat(void);
 long ublox_alt(void);

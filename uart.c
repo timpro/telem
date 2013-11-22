@@ -21,6 +21,9 @@ static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
 char NAV_PVT[92];  //everything you need in one function.
 	//    0xB5, 0x62, 0x01, 0x07, 0x54, 0x00,             // 6 header,
 	//    ....        0x00, 0x00 };          //  + 84 bytes + 2 checksum
+// Ack/Nak are mostly useful for debugging, we don`t need to check those.
+// We do need to know that we are in flight mode, and NMEA strings are off
+// - but it is as easy to re-send the command as it is to check current status.
 
 /* CRITICAL Section, do not break */
 // 9600 baud is quite slow: data processing needs to be done in the background
@@ -77,8 +80,7 @@ void UART0_IRQHandler()
 			} else pos = 0;
 			break;
 		case 6: NAV_PVT[count++] = inbyte;
-			if (count >= 84) pos = 0;
-			// on error, last byte here may be 0xB5 restart.
+			if (count >= 86) pos = 0;
 			break;
 		default:pos = 0;
 			break;
@@ -86,30 +88,45 @@ void UART0_IRQHandler()
     }
 }
 
-long ublox_time()
+long  utc, lat, lon, alt;
+short sats;
+// parse the checksum, and copy the data
+short ublox_update()
 {
-	return (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
+	short i;
+	char  chk0, chk1, chka, chkb;
+	// copy checksum first in case buffer is updating while we are reading
+	chka =  NAV_PVT[84];
+	chkb =  NAV_PVT[85];
+	// then copy all wanted data
+	utc = (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
+	lon = (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
+	lat = (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
+	alt = (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
+	sats = (0 | NAV_PVT[23]);
+	// then check validity
+
+	// 0x01075400 header +84 data bytes
+	chk0 = 0x08;
+	chk1 = 0x09;
+	chk0 += 0x54;
+	chk1 += chk0;
+	chk1 += chk0;
+	for (i = 0; i < 84; i++)
+	{
+		chk0 += NAV_PVT[i];
+		chk1 += chk0;
+	}
+	if (chk0 != chka)return 1;
+	if (chk1 != chkb)return 1;
+	return 0;
 }
 
-long ublox_lon()
-{
-	return (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
-}
-
-long ublox_lat()
-{
-	return (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
-}
-
-long ublox_alt()
-{
-	return (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
-}
-
-short ublox_sats()
-{
-	return (0 | NAV_PVT[23]);
-}
+short ublox_sats() { return sats;}
+long ublox_alt()   { return alt; }
+long ublox_lat()   { return lat; }
+long ublox_lon()   { return lon; }
+long ublox_time()  { return utc; } 
 
 int uart_write(char *p, int len)
 {
