@@ -47,7 +47,7 @@ int main(void)
     iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, mag field, pressure, temp *Chksum\r\n");
 
     for(;;) {
-	pat = 1 << 23;
+	pat = 1 << 15;
 	while (pat) {
 		accel_read();
 		ax = accel_x();
@@ -80,13 +80,16 @@ int main(void)
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
+	gps_update();
 	time = gps_time();
 	lon = gps_lon();
 	lat = gps_lat();
 	alt = gps_alt();
 	sats = gps_sats();
-	gps_update();
-	iprintf("$$HEX,%d,%02d%02d%02d,",seq++,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
+	iprintf("%02d%02d%02d,",(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
+	iprintf("%04d,%04d,%d,%d,%d\r\n", lat, lon, alt, sats, gps_error() );
+	if (++seq & 7) continue;
+	iprintf("$$HEX,%d,%02d%02d%02d,",seq>>3,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
 	iprintf("%04d,%04d,%d,%d,%d,", lat, lon, alt, sats, gps_error() );
 	iprintf("%d,%d,%d,%d*%x\r\n", force, compass, pressure, int_temp, checksum);
 

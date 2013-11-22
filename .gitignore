@@ -1,0 +1,13 @@
+# Object files.
+*.o
+*.o.lst
+
+# Various output files
+*.S19
+*.dump
+
+# Library (archive) files.
+*.a
+
+# GCC ARM Toolchain
+gcc-arm*
