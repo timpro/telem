@@ -19,7 +19,6 @@ int main(void)
     long time;
     short ax, ay, az;
     short int_temp;
-    short red, green, blue;
     short pitch, roll;
     short compass;
     short lat, lon, alt, sats;
@@ -41,6 +40,8 @@ int main(void)
 
     RGB_LED( 100, 0, 0 );
     delay( 100 );
+    RGB_LED( 0, 0, 0 );
+
     // Welcome banner
     iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
@@ -49,33 +50,22 @@ int main(void)
     for(;;) {
 	pat = 1 << 15;
 	while (pat) {
-		accel_read();
-		ax = accel_x();
-		ay = accel_y();
-		az = accel_z();
-		force = magnitude( ax, ay, az );
-		pitch = findArctan( ax, ay, az );
-		roll  = findArctan( az, ay, 0 );
-		force += (force >> 1) + (force >> 4);
-		force >>= 6; // force as percentage of 1G
-
-		red = (force - 100);
-		if (red < 0) red = -red;
-		blue = pitch;
-		if (blue < 0) blue = -blue;
-		green = roll >> 1;
-		if (green < 0) green = -green;
-
-		if (green > 80) green = 80;
-		if (blue > 80) blue = 80;
-		if (red > 80) red = 80;
-
-		RGB_LED( red, green, blue );
-
 		pat >>= 1;
 		delay(128);
-
 	}
+	accel_read();
+	ax = accel_x();
+	ay = accel_y();
+	az = accel_z();
+	force = magnitude( ax, ay, az );
+
+	// We do not need pitch/roll, only the sin/cos
+	// could pass ax,ay,az directly to compass code
+	// saving 2 lookup tables and getting better accuracy
+	pitch = findArctan( ax, ay, az );
+	roll  = findArctan( az, ay, 0 );
+	force += (force >> 1) + (force >> 4);
+	force >>= 6; // force as percentage of 1G
 
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
