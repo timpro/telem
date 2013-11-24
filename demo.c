@@ -15,7 +15,6 @@ static char *heap_end;
 // Main program
 int main(void)
 {
-    unsigned int pat;
     short ax, ay, az;
     short int_temp, battery;
     short pitch, roll;
@@ -35,20 +34,15 @@ int main(void)
     heap_end = _sbrk(0);
 
     RGB_LED( 100, 0, 0 );
-    delay( 100 );
-    RGB_LED( 0, 0, 0 );
 
     // Welcome banner
-    iprintf("\r\n\r\n====== Freescale Freedom FRDM-KL25Z\r\n");
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, mag field, pressure, temp *Chksum\r\n");
+    iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, yaw, press, temp, batt *Chksum\r\n");
 
-    for(;;) {
-	pat = 1 << 15;
-	while (pat) {
-		pat >>= 1;
-		delay(128);
-	}
+    delay( 250 );
+    RGB_LED( 0, 0, 0 );
+
+    for(;;) {	
 	accel_read();
 	ax = accel_x();
 	ay = accel_y();

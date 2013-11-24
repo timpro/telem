@@ -48,21 +48,22 @@ void gps_update(void)
 	if ( !checkfail ) gps_process();
 
 	// switch between usb and ublox on same uart
-	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
-	PORTE_PCR20 = PORT_PCR_MUX(4); // ublox on
+	PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
+	PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
 	// request new data
 	ublox_pvt();
-	delay( 128 ); 
-	PORTE_PCR20 = PORT_PCR_MUX(1); // ublox off
-	PORTA_PCR2 =  PORT_PCR_MUX(2); // usb on
+	delay( 128 ); // delay only needed for usb debug
+	PORTE_PCR20 = PORT_PCR_MUX(1); // to ublox off
+	PORTA_PCR2 =  PORT_PCR_MUX(2); // to usb on
 }
 
 void ublox_init(void)
 {
-	// Use MUX(1) to disable ADC on pins used for tx/rx
+	// Use MUX(1) to disable pins used for tx/rx
 	// Use MUX(4) for UART0, but that is usb host port
         // Setup UART for Ublox input
-	PORTE_PCR21 = PORT_PCR_MUX(1); //rx
+	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
+	PORTE_PCR21 = PORT_PCR_MUX(4); //rx
 	PORTE_PCR20 = PORT_PCR_MUX(4); //tx
 
 	setupGPS(); // turn off all strings
@@ -74,8 +75,8 @@ void ublox_init(void)
 
 	// allow Uart to empty queue, then switch Ublox to send.
 	delay( 128 );
-        PORTE_PCR20 = PORT_PCR_MUX(1); //tx
-        PORTE_PCR21 = PORT_PCR_MUX(4); //rx
+        PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
+        PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
 }
 
 void sendUBX(char *data, char len )
@@ -149,5 +150,13 @@ void gps_output(short force, short compass, short pressure,
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, force, compass, pressure, temperature, battery);
 
 	checksum = gps_CRC16_checksum (txstring, len);
-	iprintf("%s*%04x\r\n", txstring, checksum);
+	len = siprintf(txstring,"%s*%04x\r\n", txstring, checksum);
+
+	char single;
+	i = 0;
+	while (len--) {
+		single = txstring[i++];
+		iprintf("%c", single);
+		delay(128);
+	}
 }
