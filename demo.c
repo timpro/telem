@@ -17,7 +17,7 @@ int main(void)
 {
     unsigned int pat;
     short ax, ay, az;
-    short int_temp;
+    short int_temp, battery;
     short pitch, roll;
     short compass;
     unsigned short force, pressure;
@@ -66,9 +66,9 @@ int main(void)
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
+	battery = 0;
 
-	//void gps_output(short full, short force, short compass, short pressure, short temperature);
-	gps_output(force, compass, pressure, int_temp);
+	gps_output(force, compass, pressure, int_temp, battery);
 
     }
 }

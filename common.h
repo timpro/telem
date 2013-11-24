@@ -55,7 +55,8 @@ short mag_compass(short pitch, short roll);
 void ublox_init(void);
 short ublox_update(void);
 long ublox_time(void);
-void gps_output(short force, short compass, short pressure, short temperature);
+void gps_output(short force, short compass, short pressure,
+		short temperature, short battery);
 short ublox_sats(void);
 long ublox_lon(void);
 long ublox_lat(void);

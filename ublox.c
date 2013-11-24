@@ -9,6 +9,9 @@
 #include "common.h"
 #include "habduino.h"
 
+// output buffer. Needs to be large enough for sprintf output
+char txstring[80];
+
 long  utime = 0, ulat = 0, ulon = 0, ualt = 0;
 short usats = 0;
 char  lock = 0, tslf = 0, checkfail = 0, psm = 0;
@@ -107,9 +110,10 @@ void find_pos()
 
 unsigned short seq = 100;
 unsigned short checksum = 0xdead;
-void gps_output(short force, short compass, short pressure, short temperature )
+void gps_output(short force, short compass, short pressure,
+		short temperature, short battery )
 {
-	short errorcode, quick;
+	short errorcode, quick, len;
 	long alt;
 
 	gps_update();
@@ -123,13 +127,15 @@ void gps_output(short force, short compass, short pressure, short temperature )
 	alt >>= 13;
 
 	quick = (3&seq++);
-	if (!quick) iprintf("$$HEX,%d,", seq>>2);
+	txstring[0] = 0x0;
+	if (!quick) siprintf(txstring,"$$$17A,%d,", seq>>2);
 	
-        iprintf("%02d%02d%02d,",(char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
-        iprintf("%d.%04d,%d,%04d,", lat_int, lat_dec, lon_int, lon_dec );
-	iprintf("%d,%d,%d,", (short)alt, usats, errorcode );
-	if (quick)
-		iprintf("\r\n");
-	else
-	        iprintf("%d,%d,%d,%d*%x\r\n", force, compass, pressure, temperature, checksum);
+        siprintf(txstring,"%s%02d%02d%02d,",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
+        siprintf(txstring,"%s%d.%04d,%d.%04d,",txstring, lat_int, lat_dec, lon_int, lon_dec );
+	len = siprintf(txstring, "%s%d,%d,%d,", txstring, (short)alt, usats, errorcode );
+	if (!quick)
+	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, force, compass, pressure, temperature, battery);
+
+	checksum = gps_CRC16_checksum (txstring, len);
+	iprintf("%s*%04x\r\n", txstring, checksum);
 }
