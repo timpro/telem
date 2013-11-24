@@ -47,12 +47,16 @@ void mag_init(void)
 //      (mx * cos(pitch) +  mz * cos(roll) * sin(pitch))
 
 // Measure Mag Field, transform by attitude and calculate North
-short mag_compass(short pitch, short roll)
+short mag_compass(short ax, short ay, short az)
 {
 	char dataready;
 	short magX, magY, magZ;
         short angle1, angle2, result;
+	short pitch, roll;
         short sin_pitch, sin_roll, cos_pitch, cos_roll;
+
+	pitch = findArctan( ax, ay, az );
+	roll  = findArctan( az, ay, 0 );
 
         if (MAG_ID != magReady ) return 0;
 	dataready = MAG_XYZ_READY & hal_i2c_read(I2C1_B, MAG_ADD, MAG_READY_REG);

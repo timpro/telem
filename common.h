@@ -49,7 +49,7 @@ short baro_temp(void);
 
 // From mag3110.c
 void  mag_init(void);
-short mag_compass(short pitch, short roll);
+short mag_compass(short ax, short ay, short az);
 
 // From ublox.c
 void ublox_init(void);

@@ -15,9 +15,10 @@ static char *heap_end;
 // Main program
 int main(void)
 {
-    short ax, ay, az;
+    short ax = 0;
+    short ay = 0;
+    short az = 4096;
     short int_temp, battery;
-    short pitch, roll;
     short compass;
     unsigned short force, pressure;
 
@@ -42,22 +43,19 @@ int main(void)
     delay( 250 );
     RGB_LED( 0, 0, 0 );
 
+    accel_read();// preload pipeline
     for(;;) {	
-	accel_read();
 	ax = accel_x();
 	ay = accel_y();
 	az = accel_z();
 	force = magnitude( ax, ay, az );
-
-	// We do not need pitch/roll, only the sin/cos
-	// could pass ax,ay,az directly to compass code
-	// saving 2 lookup tables and getting better accuracy
-	pitch = findArctan( ax, ay, az );
-	roll  = findArctan( az, ay, 0 );
 	force += (force >> 1) + (force >> 4);
 	force >>= 6; // force as percentage of 1G
 
-	compass = mag_compass(pitch, roll);
+	compass = mag_compass(ax, ay, az);
+	// to allow for sample lag we need to update accelerometer just after magnetometer
+	accel_read();
+
 	pressure = get_pressure();
 	int_temp = baro_temp();
 	battery = 0;
