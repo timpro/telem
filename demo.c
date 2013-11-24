@@ -16,15 +16,11 @@ static char *heap_end;
 int main(void)
 {
     unsigned int pat;
-    long time;
     short ax, ay, az;
     short int_temp;
     short pitch, roll;
     short compass;
-    short lat, lon, alt, sats;
     unsigned short force, pressure;
-    unsigned short checksum = 0xdead;
-    unsigned short seq = 100;
 
     // Initialize all modules
     uart_init(9600);
@@ -70,18 +66,9 @@ int main(void)
 	compass = mag_compass(pitch, roll);
 	pressure = get_pressure();
 	int_temp = baro_temp();
-	gps_update();
-	time = gps_time();
-	lon = gps_lon();
-	lat = gps_lat();
-	alt = gps_alt();
-	sats = gps_sats();
-	iprintf("%02d%02d%02d,",(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
-	iprintf("%04d,%04d,%d,%d,%d\r\n", lat, lon, alt, sats, gps_error() );
-	if (++seq & 7) continue;
-	iprintf("$$HEX,%d,%02d%02d%02d,",seq>>3,(char)(time>>16)&31, (char)(time>>8)&63, (char)time&63 );
-	iprintf("%04d,%04d,%d,%d,%d,", lat, lon, alt, sats, gps_error() );
-	iprintf("%d,%d,%d,%d*%x\r\n", force, compass, pressure, int_temp, checksum);
+
+	//void gps_output(short full, short force, short compass, short pressure, short temperature);
+	gps_output(force, compass, pressure, int_temp);
 
     }
 }

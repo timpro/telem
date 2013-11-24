@@ -5,12 +5,14 @@
 //
 // Code in habduino.h subject to GPL licence
 
+#include <stdio.h>
 #include "common.h"
 #include "habduino.h"
 
 long  utime = 0, ulat = 0, ulon = 0, ualt = 0;
+short usats = 0;
 char  lock = 0, tslf = 0, checkfail = 0, psm = 0;
-short usats = 0, navmode = 0, psm_status = 0;
+short navmode = 0, psm_status = 0;
 
 #if 0
   // Switch to/from Flight mode by altitude
@@ -21,14 +23,14 @@ short usats = 0, navmode = 0, psm_status = 0;
   }
 #endif
 
-
+// Need to copy good values before updating
 void gps_process(void)
 {
-	utime = ublox_time();
-	ulon  = ublox_lon();
-	ulat  = ublox_lat();
-	ualt  = ublox_alt();
-	usats = ublox_sats();
+       utime = ublox_time();
+       ulon  = ublox_lon();
+       ulat  = ublox_lat();
+       ualt  = ublox_alt();
+       usats = ublox_sats();
 }
 
 void gps_update(void)
@@ -77,61 +79,57 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-short gps_lon()
+short lon_int, lon_dec, lat_int, lat_dec;
+void find_pos()
 {
-    long lon = ulon;
-    short lon_int, lon_dec;
-    // 4 bytes of latitude/longitude (1e-7)
-    // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
-    if (lon < 0) {
-        lon -= 500;
-        lon /= 1000;
-        lon_int = (short) (lon / 10000);
-        lon_dec = (short) ((long)lon_int*10000 - lon);
-    } else {
-        lon += 500;
-        lon /= 1000;
-        lon_int = (short) (lon / 10000);
-        lon_dec = (short) (lon - (long)lon_int*10000);
-    }
-    return lon_dec;
-}
-short gps_lat()
-{
-    long lat = ulat;
-    short lat_int, lat_dec;
-    // may be less than zero, which would be bad
-    lat += 500;
-    lat /= 1000;
-    lat_int = (short) (lat/10000);
-    lat_dec = (short) (lat - (long)lat_int*10000) ;
+	long lon =  ulon;
+	// 4 bytes of latitude/longitude (1e-7)
+	// divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
+	if (lon < 0) {
+		lon -= 500;
+		lon /= 1000;
+		lon_int = (short) (lon / 10000);
+		lon_dec = (short) ((long)lon_int*10000 - lon);
+	} else {
+		lon += 500;
+		lon /= 1000;
+		lon_int = (short) (lon / 10000);
+		lon_dec = (short) (lon - (long)lon_int*10000);
+	}
 
-    return lat_dec;
+	long lat =  ulat;
+	// may be less than zero, which would be bad
+	lat += 500;
+	lat /= 1000;
+	lat_int = (short) (lat/10000);
+	lat_dec = (short) (lat - (long)lat_int*10000) ;
 }
 
-short gps_alt()
+unsigned short seq = 100;
+unsigned short checksum = 0xdead;
+void gps_output(short force, short compass, short pressure, short temperature )
 {
-    long alt = ualt;
-    // 4 bytes of altitude above MSL (mm)
-    // Ignore low byte, but data is signed
+	short errorcode, quick;
+	long alt;
 
-    // Scale to meters (Within accuracy of GPS)
-    alt >>= 8;
-    alt *= 2097;
-    return (short) (alt >> 13);
-}
+	gps_update();
+	find_pos();
+	errorcode = checkfail;
 
-short gps_error(void)
-{
-	return checkfail;
-}
+	// 4 bytes of altitude above MSL (mm)
+	// Scale to meters (Within accuracy of GPS)
+	alt = ualt >> 8;
+	alt *= 2097;
+	alt >>= 13;
 
-long gps_time(void)
-{
-	return utime;
-}
-
-short gps_sats(void)
-{
-	return usats;
+	quick = (3&seq++);
+	if (!quick) iprintf("$$HEX,%d,", seq>>2);
+	
+        iprintf("%02d%02d%02d,",(char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
+        iprintf("%d.%04d,%d,%04d,", lat_int, lat_dec, lon_int, lon_dec );
+	iprintf("%d,%d,%d,", (short)alt, usats, errorcode );
+	if (quick)
+		iprintf("\r\n");
+	else
+	        iprintf("%d,%d,%d,%d*%x\r\n", force, compass, pressure, temperature, checksum);
 }
