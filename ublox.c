@@ -17,8 +17,10 @@ char padding[3072] = {
 #include "snowcrash.txt"
 };
 
-long  utime = 0, ulat = 0, ulon = 0, ualt = 0;
-short usats = 0;
+short lon_int = -4, lon_dec = 0;
+short lat_int = 51, lat_dec = 0;
+long  utime = 0;
+short usats = 0 , altitude = 100;
 char  lock = 0, tslf = 0, checkfail = 0, psm = 0;
 short navmode = 0, psm_status = 0;
 
@@ -34,11 +36,36 @@ short navmode = 0, psm_status = 0;
 // Need to copy good values before updating
 void gps_process(void)
 {
-       utime = ublox_time();
-       ulon  = ublox_lon();
-       ulat  = ublox_lat();
-       ualt  = ublox_alt();
-       usats = ublox_sats();
+	utime = ublox_time();
+	long ulon  = ublox_lon();
+        // 4 bytes of latitude/longitude (1e-7)
+        // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
+        if (ulon < 0) {
+                ulon -= 500;
+                ulon /= 1000;
+                lon_int = (short) (ulon / 10000);
+                lon_dec = (short) ((long)lon_int*10000 - ulon);
+        } else {
+                ulon += 500;
+                ulon /= 1000;
+                lon_int = (short) (ulon / 10000);
+                lon_dec = (short) (ulon - (long)lon_int*10000);
+        }
+
+	long ulat  = ublox_lat();
+	ulat += 500;
+	ulat /= 1000;
+	lat_int = (short) (ulat/10000);
+	lat_dec = (short) (ulat - (long)lat_int*10000) ;
+
+	long ualt  = ublox_alt();
+	// 4 bytes of altitude above MSL (mm)
+	// Scale to meters (Within accuracy of GPS)
+	ualt >>= 8;
+	ualt *= 2097;
+	altitude = (short)(ualt >> 13);
+
+	usats = ublox_sats();
 }
 
 void gps_update(void)
@@ -67,13 +94,11 @@ void ublox_init(void)
 	PORTE_PCR20 = PORT_PCR_MUX(4); //tx
 
 	setupGPS(); // turn off all strings
-	delay( 128 );
 	// May need to start in Flight Mode for mid-air reboots
-	// Can set Portable Mode after getting fix
-	// setGPS_DynamicMode6();
-	setGPS_PowerSaveMode(); // Don`t really want this too soon.
+	setGPS_DynamicMode6();
+	setGPS_PowerSaveMode(); // Seems to work well even indoors
 
-	// allow Uart to empty queue, then switch Ublox to send.
+	// allow Uart to empty queue, then switch ouput to USB.
 	delay( 128 );
         PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
         PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
@@ -88,32 +113,6 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-short lon_int, lon_dec, lat_int, lat_dec;
-void find_pos()
-{
-	long lon =  ulon;
-	// 4 bytes of latitude/longitude (1e-7)
-	// divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
-	if (lon < 0) {
-		lon -= 500;
-		lon /= 1000;
-		lon_int = (short) (lon / 10000);
-		lon_dec = (short) ((long)lon_int*10000 - lon);
-	} else {
-		lon += 500;
-		lon /= 1000;
-		lon_int = (short) (lon / 10000);
-		lon_dec = (short) (lon - (long)lon_int*10000);
-	}
-
-	long lat =  ulat;
-	// may be less than zero, which would be bad
-	lat += 500;
-	lat /= 1000;
-	lat_int = (short) (lat/10000);
-	lat_dec = (short) (lat - (long)lat_int*10000) ;
-}
-
 unsigned short seq = 100;
 unsigned short padcount = 0;
 unsigned short checksum = 0xdead;
@@ -122,17 +121,9 @@ void gps_output(short force, short compass, short pressure,
 {
 	short errorcode, quick, len, i;
 	unsigned short stringcount;
-	long alt;
 
 	gps_update();
-	find_pos();
 	errorcode = checkfail;
-
-	// 4 bytes of altitude above MSL (mm)
-	// Scale to meters (Within accuracy of GPS)
-	alt = ualt >> 8;
-	alt *= 2097;
-	alt >>= 13;
 
 	quick = (3&seq++);
 	txstring[0] = 0x0;
@@ -145,7 +136,7 @@ void gps_output(short force, short compass, short pressure,
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
-	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, (short)alt, usats, errorcode );
+	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, errorcode );
 	if (!quick)
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, force, compass, pressure, temperature, battery);
 

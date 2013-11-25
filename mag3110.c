@@ -10,9 +10,9 @@
 
 // Magnetic calibration needs to be done after board assembly
 // Offsets can be programmed into chip, or added in code.
-#define MAG_CAL_X (-1540)
-#define MAG_CAL_Y (+1590)
-#define MAG_CAL_Z (+1580)
+#define MAG_CAL_X (-1500)
+#define MAG_CAL_Y (+1490)
+#define MAG_CAL_Z (+1560)
 
 #define MAG_ADD		(0x0E << 1)
 #define MAG_ID		(0xC4)
