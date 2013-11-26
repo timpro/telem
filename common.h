@@ -54,13 +54,18 @@ short mag_compass(short ax, short ay, short az);
 // From ublox.c
 void ublox_init(void);
 short ublox_update(void);
-long ublox_time(void);
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery);
+
+// Passing data from uart.c
 short ublox_sats(void);
+long ublox_time(void);
 long ublox_lon(void);
 long ublox_lat(void);
 long ublox_alt(void);
+
+// From domino.c
+void domino_tx(char);
 
 // From _startup.c
 void fault(uint32_t pattern);

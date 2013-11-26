@@ -172,16 +172,6 @@ int uart_read(char *p, int len)
     return len - i;
 }
 
-// non-blocking read for 60 bytes of ublox data
-void uart_empty(char *p)
-{
-	short i = 0;
-	while ( (i++ < 60) && !buf_isempty(rx_buffer) )
-		*p++ = buf_get_byte(rx_buffer);
-
-	UART0_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt
-}
-
 //
 // uart_init() -- Initialize debug / OpenSDA UART0
 //

@@ -113,14 +113,13 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-unsigned short seq = 100;
+unsigned short seq = 400;
 unsigned short padcount = 0;
-unsigned short checksum = 0xdead;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {
 	short errorcode, quick, len, i;
-	unsigned short stringcount;
+	unsigned short checksum, stringcount;
 
 	gps_update();
 	errorcode = checkfail;
@@ -143,11 +142,11 @@ void gps_output(short force, short compass, short pressure,
 	checksum = gps_CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\r\n", txstring, checksum);
 
+	iprintf("%s",txstring);
 	char single;
 	i = 0;
 	while (len--) {
 		single = txstring[i++];
-		iprintf("%c", single);
-		delay(128);
+		domino_tx(single);
 	}
 }
