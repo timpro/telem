@@ -35,6 +35,7 @@ int uart_read(char *p, int len);
 void uart_init(int baud_rate);
 
 // From delay.c
+void lpdelay(unsigned int ms);
 void delay(unsigned int ms);
 
 // From accel.c
