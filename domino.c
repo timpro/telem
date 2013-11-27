@@ -30,7 +30,7 @@ void putsym(char sym)
 	voltage = (current << 4) + 1024;
 	//DAC = voltage;
 
-	delay(128); // low power mode ??
+	delay(64);
 }
 
 void domino_tx(char txchar)

@@ -21,7 +21,11 @@ void delay(unsigned int length_ms)
     // Start the timer and wait for it to reach the compare value
     LPTMR0_CSR = LPTMR_CSR_TEN_MASK;
     while (!(LPTMR0_CSR & LPTMR_CSR_TCF_MASK))
-        ;
-    
+    {
+//	__asm volatile("dsb");
+//	__asm volatile("wfi"); /* wait for interrupt */
+//	__asm volatile("isb");
+    };
+
     LPTMR0_CSR = 0;                     // Turn off timer
 }

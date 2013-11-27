@@ -95,7 +95,7 @@ void ublox_init(void)
 
 	setupGPS(); // turn off all strings
 	// May need to start in Flight Mode for mid-air reboots
-	setGPS_DynamicMode6();
+	// setGPS_DynamicMode6();
 	setGPS_PowerSaveMode(); // Seems to work well even indoors
 
 	// allow Uart to empty queue, then switch ouput to USB.
