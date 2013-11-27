@@ -5,7 +5,6 @@
 //  Copyright (c) 2013 John Greb
 //
 
-#include <freedom.h>
 #include "common.h"
 
 // Circular buffers for transmit and receive

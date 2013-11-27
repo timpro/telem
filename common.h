@@ -5,6 +5,9 @@
 
 #include "MKL25Z4.h"
 
+// core clock for Uart is half cpu speed
+#define CORE_CLOCK 21000000
+
 // Memory locations defined by the linker
 extern uint32_t __heap_start[];
 extern uint32_t __StackTop[];

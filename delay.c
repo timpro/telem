@@ -18,14 +18,13 @@ void delay(unsigned int length_ms)
     // Use 1kHz LPO with no prescaler
     LPTMR0_PSR = LPTMR_PSR_PCS(1) | LPTMR_PSR_PBYP_MASK;
     
-    // Start the timer and wait for it to reach the compare value
-    LPTMR0_CSR = LPTMR_CSR_TEN_MASK;
-    while (!(LPTMR0_CSR & LPTMR_CSR_TCF_MASK))
-    {
+    // Start the timer
+    LPTMR0_CSR = LPTMR_CSR_TEN_MASK;// | LPTMR_CSR_TIE_MASK;
+    while (!(LPTMR0_CSR & LPTMR_CSR_TCF_MASK)) { ;
 //	__asm volatile("dsb");
 //	__asm volatile("wfi"); /* wait for interrupt */
 //	__asm volatile("isb");
-    };
+    }
 
     LPTMR0_CSR = 0;                     // Turn off timer
 }
