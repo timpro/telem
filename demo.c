@@ -24,6 +24,7 @@ int main(void)
 
     // Initialize all modules
     uart_init(9600);
+    lpdelay_init();
     hal_i2c_init(I2C1_BASE_PTR);	// Setup I2C for EVK
     accel_init();
     baro_init();
@@ -40,8 +41,9 @@ int main(void)
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
     iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, yaw, press, temp, batt *Chksum\r\n");
 
-    delay( 250 );
+    lpdelay();
     RGB_LED( 0, 0, 0 );
+    lpdelay();
 
     accel_read();// preload pipeline
     for(;;) {	

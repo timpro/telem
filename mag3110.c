@@ -47,6 +47,7 @@ void mag_init(void)
 //      (mx * cos(pitch) +  mz * cos(roll) * sin(pitch))
 
 // Measure Mag Field, transform by attitude and calculate North
+// Accuracy is limited by calibration, so 16bit calc is adequate
 short mag_compass(short ax, short ay, short az)
 {
 	char dataready;

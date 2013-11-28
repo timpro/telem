@@ -35,7 +35,8 @@ int uart_read(char *p, int len);
 void uart_init(int baud_rate);
 
 // From delay.c
-void lpdelay(unsigned int ms);
+void lpdelay_init(void);
+void lpdelay(void);
 void delay(unsigned int ms);
 
 // From accel.c
@@ -101,5 +102,3 @@ int buf_isempty(const RingBuffer *buf);
 uint8_t buf_get_byte(RingBuffer *buf);
 void buf_put_byte(RingBuffer *buf, uint8_t val);
 
-// tests.c
-void tests(void);

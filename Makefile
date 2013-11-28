@@ -21,9 +21,8 @@ CFLAGS = -ffunction-sections -fdata-sections -Wall -Wa,-adhlns="$@.lst" \
 		 -fmessage-length=0 $(TARGET) -mthumb -mfloat-abi=soft \
 		 $(DEBUG_OPTS) $(OPTS) -I .
 
-LIBOPTIONS = accel8491.o baro3115.o mag3110.o ublox.o domino.o
-LIBOBJS = _startup.o syscalls.o uart.o delay.o\
-		hal_i2c.o ring.o tests.o math.o $(LIBOPTIONS)
+LIBEXTRA = accel8491.o baro3115.o mag3110.o ublox.o domino.o math.o
+LIBOBJS = _startup.o syscalls.o uart.o delay.o hal_i2c.o ring.o $(LIBEXTRA)
 
 INCLUDES = freedom.h common.h
 
