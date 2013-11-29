@@ -19,15 +19,22 @@ const char varicode[128][3] = {
 	{ 1,15, 0}, { 1,10, 0}, { 2, 9, 0}, { 0,10,12}, { 0, 9,14}, { 0,10,13}, { 0,11, 8}, { 2,10,15} 
 };
 
+// Using 2V Vcc, 12bit Dac, so 1kHz on NTX2 is 10 bits
+#define BASE_FREQ (1024)
+
+// DominoEx has (stepwidth  == frequency), domino 8 or 16 is (16 / 1.024)
+#define STEP_SIZE (16)
+
 char current = 0;
 void putsym(char sym)
 {
 	short voltage;
 	current += 2 + (sym & 16);
 	if (current > 17) current -= 18;
-	// 12 bit dac = 2v, 1kHz = 10 bits
-	// step = 16KHz/1024 => 16, 4bits
-	voltage = (current << 4) + 1024;
+	// 12 bit dac = 2v, 1kHz on NTX2 is 10 bits
+	// step = 16KHz/1024 => 16 for dominoex 8 or 16
+	// use 11 for dominoex11 or rsid 
+	voltage = (current * 16) + BASE_FREQ;
 
 	lpdelay(); // allow previous sym to timeout
 	//DAC = voltage;

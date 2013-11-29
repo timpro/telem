@@ -87,10 +87,9 @@ void UART0_IRQHandler()
     }
 }
 
-long  utc, lat, lon, alt;
-short sats;
 // parse the checksum, and copy the data
-short ublox_update()
+// checksum will pass if data is all zeros at boot
+short ublox_update(gps_struct *gpsdata)
 {
 	short i;
 	char  chk0, chk1, chka, chkb;
@@ -98,11 +97,11 @@ short ublox_update()
 	chka =  NAV_PVT[84];
 	chkb =  NAV_PVT[85];
 	// then copy all wanted data
-	utc = (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
-	lon = (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
-	lat = (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
-	alt = (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
-	sats = (0 | NAV_PVT[23]);
+	gpsdata->utc = (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
+	gpsdata->lon = (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
+	gpsdata->lat = (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
+	gpsdata->alt = (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
+	gpsdata->sats = (0 | NAV_PVT[23]);
 	// then check validity
 
 	// 0x01075400 header +84 data bytes
@@ -120,12 +119,6 @@ short ublox_update()
 	if (chk1 != chkb)return 1;
 	return 0;
 }
-
-short ublox_sats() { return sats;}
-long ublox_alt()   { return alt; }
-long ublox_lat()   { return lat; }
-long ublox_lon()   { return lon; }
-long ublox_time()  { return utc; } 
 
 int uart_write(char *p, int len)
 {

@@ -17,12 +17,13 @@ char padding[3072] = {
 #include "snowcrash.txt"
 };
 
-short lon_int = -4, lon_dec = 0;
-short lat_int = 51, lat_dec = 0;
-long  utime = 0;
-short usats = 0 , altitude = 100;
-char  lock = 0, tslf = 0, checkfail = 0, psm = 0;
-short navmode = 0, psm_status = 0;
+gps_struct gpsdata;
+long utime = 0;
+short lon_int = 0, lon_dec = 0;
+short lat_int = 0, lat_dec = 0;
+short altitude = 0, usats = 0, flags = 0;
+
+char  lock = 0, tslf = 0, psm = 0;
 
 #if 0
   // Switch to/from Flight mode by altitude
@@ -36,8 +37,8 @@ short navmode = 0, psm_status = 0;
 // Need to copy good values before updating
 void gps_process(void)
 {
-	utime = ublox_time();
-	long ulon  = ublox_lon();
+	utime = gpsdata.utc;
+	long ulon  = gpsdata.lon;
         // 4 bytes of latitude/longitude (1e-7)
         // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
         if (ulon < 0) {
@@ -52,27 +53,27 @@ void gps_process(void)
                 lon_dec = (short) (ulon - (long)lon_int*10000);
         }
 
-	long ulat  = ublox_lat();
+	long ulat  = gpsdata.lat;
 	ulat += 500;
 	ulat /= 1000;
 	lat_int = (short) (ulat/10000);
 	lat_dec = (short) (ulat - (long)lat_int*10000) ;
 
-	long ualt  = ublox_alt();
+	long ualt  = gpsdata.alt;
 	// 4 bytes of altitude above MSL (mm)
 	// Scale to meters (Within accuracy of GPS)
 	ualt >>= 8;
 	ualt *= 2097;
 	altitude = (short)(ualt >> 13);
 
-	usats = ublox_sats();
+	usats = gpsdata.sats;
 }
 
 void gps_update(void)
 {
-	// Need to test checksum before copying data and processing
-	checkfail = ublox_update();
-	if ( !checkfail ) gps_process();
+	// Need to test checksum before processing new data
+	flags = ublox_update(&gpsdata);
+	if ( !flags ) gps_process();
 
 	// switch between usb and ublox on same uart
 	PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
@@ -118,11 +119,10 @@ unsigned short padcount = 0;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {
-	short errorcode, quick, len, i;
+	short quick, len, i;
 	unsigned short checksum, stringcount;
 
 	gps_update();
-	errorcode = checkfail;
 
 	quick = (3&seq++);
 	txstring[0] = 0x0;
@@ -135,7 +135,7 @@ void gps_output(short force, short compass, short pressure,
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
-	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, errorcode );
+	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
 	if (!quick)
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, force, compass, pressure, temperature, battery);
 

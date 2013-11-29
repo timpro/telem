@@ -5,8 +5,18 @@
 
 #include "MKL25Z4.h"
 
-// core clock for Uart (unaffected by dividers ?)
-#define CORE_CLOCK 21000000
+// core clock for Uart -- check against _startup settings
+#define CORE_CLOCK (21000000)
+
+typedef struct {
+  long  alt;
+  long  lat;
+  long  lon;
+  long  utc;
+  short sats;
+  char  power_flags;
+  char  fix_flags;
+} gps_struct;
 
 // Memory locations defined by the linker
 extern uint32_t __heap_start[];
@@ -58,16 +68,9 @@ short mag_compass(short ax, short ay, short az);
 
 // From ublox.c
 void ublox_init(void);
-short ublox_update(void);
+short ublox_update(gps_struct  *gpsdata);
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery);
-
-// Passing data from uart.c
-short ublox_sats(void);
-long ublox_time(void);
-long ublox_lon(void);
-long ublox_lat(void);
-long ublox_alt(void);
 
 // From domino.c
 void domino_tx(char);
