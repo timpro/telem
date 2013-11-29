@@ -127,7 +127,7 @@ void gps_output(short force, short compass, short pressure,
 	txstring[0] = 0x20;
 	txstring[1] = 0x00;
 	if (!quick)
- 		siprintf(txstring,"$$17A,%d", seq>>2);
+ 		siprintf(txstring,"$$$17A,%d", seq>>2);
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
