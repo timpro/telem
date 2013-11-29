@@ -12,11 +12,6 @@
 // output buffer. Needs to be large enough for sprintf output
 char txstring[80];
 
-//padding text: 2^7 strings of 24 chars == 3072
-char padding[3072] = {
-#include "snowcrash.txt"
-};
-
 gps_struct gpsdata;
 long utime = 0;
 short lon_int = 0, lon_dec = 0;
@@ -85,7 +80,7 @@ void gps_update(void)
 	PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
 	// request new data
 	ublox_pvt();
-	delay( 128 ); // delay only needed for usb debug
+	lpdelay(); // delay only needed for usb debug
 	PORTE_PCR20 = PORT_PCR_MUX(1); // to ublox off
 	PORTA_PCR2 =  PORT_PCR_MUX(2); // to usb on
 }
@@ -105,7 +100,7 @@ void ublox_init(void)
 	setGPS_PowerSaveMode(); // Seems to work well even indoors
 
 	// allow Uart to empty queue, then switch ouput to USB.
-	delay( 128 );
+	lpdelay();
         PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
         PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
 }
@@ -115,28 +110,24 @@ void sendUBX(char *data, char len )
 	char wakeup = 0xff;
 	//need to wake ublox, then wait 100ms (or 500?)
 	uart_write( &wakeup, 1);
-	delay( 128 );
+	lpdelay();
 	uart_write( data, len);
 }
 
 unsigned short seq = 400;
-unsigned short padcount = 0;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {
 	short quick, len, i;
-	unsigned short checksum, stringcount;
+	unsigned short checksum;
 
 	gps_update();
 
 	quick = (3&seq++);
-	txstring[0] = 0x0;
-	if (quick) {
-		stringcount = 24 * (127 & padcount++);
-                for (i = 0; i < 24; i++) 
-                        txstring[i] = padding[stringcount++];
-                txstring[i] = 0x00;
-	} else siprintf(txstring,"$$$17A,%d", seq>>2);
+	txstring[0] = 0x20;
+	txstring[1] = 0x00;
+	if (!quick)
+ 		siprintf(txstring,"$$17A,%d", seq>>2);
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );

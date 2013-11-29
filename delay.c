@@ -17,12 +17,15 @@ void delay(unsigned int length_ms)
     }
 }
 
+// domino 8 = 126, 16 = 64, 11 = 93
+#define DOMINO_DELAY 128
+
 // Timer interrupt handler
 volatile short lpt_flag = 0;
 void LPTimer_IRQHandler()
 {
     LPTMR0_CSR |=  LPTMR_CSR_TCF_MASK;   // clear the LPT timer compare flag
-    LPTMR0_CMR = 64;
+    LPTMR0_CMR = DOMINO_DELAY;
     LPTMR0_CSR = ( LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK);
     lpt_flag = 1;
 }
@@ -32,7 +35,7 @@ void lpdelay_init(void)
 {
     SIM_SCGC5 |= SIM_SCGC5_LPTMR_MASK;  // Make sure clock is enabled
     LPTMR0_CSR = 0;                     // Reset LPTMR settings
-    LPTMR0_CMR = 64;             // Set compare value (64 ms for Dom16)
+    LPTMR0_CMR = DOMINO_DELAY;             // Set compare value
     enable_irq(INT_LPTimer);
     LPTMR0_PSR = LPTMR_PSR_PCS(1) | LPTMR_PSR_PBYP_MASK;
     LPTMR0_CSR = LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK;
