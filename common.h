@@ -5,7 +5,7 @@
 
 #include "MKL25Z4.h"
 
-// core clock for Uart is half cpu speed
+// core clock for Uart (unaffected by dividers ?)
 #define CORE_CLOCK 21000000
 
 // Memory locations defined by the linker

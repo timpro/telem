@@ -1,4 +1,4 @@
-
+//
 // accel8491.c -- Accelerometer support
 //
 //  Copyright (c) 2013 John Greb <github.com/hexameron>
@@ -20,7 +20,7 @@ void accel_read()
 {
     uint8_t status;
     char    rawdata[8];
-    short   loops = 5;
+    short   loops = 10; // allow for variable delay
 
     // 8491 needs 0.9ms to power on for every read.
     MMA8491Q_Enable();

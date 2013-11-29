@@ -86,7 +86,7 @@ void hal_i2c_init(I2C_MemMapPtr p)
     PORTE_PCR0 = PORT_PCR_MUX(6);
     PORTE_PCR1 = PORT_PCR_MUX(6);
 
-    // 0x14 is 48Mhz/2/80 = 300khz, changing needs power cycle and may fail
+    // 0x14 is 48Mhz/2/80 = 300khz, changing this may fail
     p->F  = 0x14;                   // Baudrate settings:  ICR=0x14, MULT=0
     p->C1 = I2C_C1_IICEN_MASK;      // Enable:  IICEN = 1<<7
 }

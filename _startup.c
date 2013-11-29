@@ -39,20 +39,18 @@ __attribute__ ((section (".cfmconfig"))) const uint8_t _cfm[0x10] = {
 
 // ----------------------------------------------------------------------------------
 //
-// Initialize the system clocks to a 42 Mhz core clock speed
-//
+// Initialize the system clocks with default  21Mhz core clock speed
+//  with divide-by-four for cpu/bus = 5.25 MHz ?
 static void init_clocks(void)
 {   
-    // internal clock, 41.94MHz cpu
-    /* divide by 3 + 1 for 10 MHz bus */
     SIM_CLKDIV1 = SIM_CLKDIV1_OUTDIV1(3) | SIM_CLKDIV1_OUTDIV4(3);
     /* MCG_C1: CLKS=0,FRDIV=0,IREFS=1,IRCLKEN=1,IREFSTEN=0 */
-    MCG_C1 = (uint8_t)6;
-    MCG_C2 = (uint8_t)0;
-    MCG_C4 = (uint8_t)(MCG_C4 & ~(0xE0));
-    OSC0_CR =(uint8_t)0x80;
-    MCG_C5 = (uint8_t)0;
-    MCG_C6 = (uint8_t)0;
+    MCG_C1 = (uint8_t)6; // default is 4, turns on 1KHz clock
+    MCG_C2 = (uint8_t)0; // 1 or 0 => 4MHz clock or 32K clock
+	// C3 adjusts clock speed: preset at factory (21MHz)
+    MCG_C4 = (uint8_t)(MCG_C4 & ~(0xE0)); // default, 20-24Mhz clock
+    // OSC0_CR =(uint8_t)0x80; //turn ON external oscillator.
+
     while(!(MCG_S & MCG_S_IREFST_MASK)) {
     }
     while(MCG_S & 0x0C) {

@@ -39,7 +39,7 @@ int main(void)
 
     // Welcome banner
     iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, yaw, press, temp, batt *Chksum\r\n");
+    //iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, yaw, press, temp, batt *Chksum\r\n");
 
     lpdelay();
     RGB_LED( 0, 0, 0 );
