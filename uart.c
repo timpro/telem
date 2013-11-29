@@ -102,7 +102,9 @@ short ublox_update(gps_struct *gpsdata)
 	gpsdata->lat = (0 | NAV_PVT[29]<< 8 | NAV_PVT[30] << 16 | NAV_PVT[31] << 24);
 	gpsdata->alt = (0 | NAV_PVT[33]<< 8 | NAV_PVT[34] << 16 | NAV_PVT[35] << 24);
 	gpsdata->sats = (0 | NAV_PVT[23]);
-	// then check validity
+
+	gpsdata->power = NAV_PVT[21];
+	gpsdata->fix  =  NAV_PVT[20];
 
 	// 0x01075400 header +84 data bytes
 	chk0 = 0x08;
@@ -115,8 +117,8 @@ short ublox_update(gps_struct *gpsdata)
 		chk0 += NAV_PVT[i];
 		chk1 += chk0;
 	}
-	if (chk0 != chka)return 1;
-	if (chk1 != chkb)return 1;
+	if (chk0 != chka)return 99;
+	if (chk1 != chkb)return 99;
 	return 0;
 }
 

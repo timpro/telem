@@ -14,8 +14,8 @@ typedef struct {
   long  lon;
   long  utc;
   short sats;
-  char  power_flags;
-  char  fix_flags;
+  char  power;
+  char  fix;
 } gps_struct;
 
 // Memory locations defined by the linker

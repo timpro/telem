@@ -21,9 +21,8 @@ gps_struct gpsdata;
 long utime = 0;
 short lon_int = 0, lon_dec = 0;
 short lat_int = 0, lat_dec = 0;
-short altitude = 0, usats = 0, flags = 0;
-
-char  lock = 0, tslf = 0, psm = 0;
+short altitude = 0, usats = 0;
+char  ufix = 0, tslf = 0, upsm = 0, flags;
 
 #if 0
   // Switch to/from Flight mode by altitude
@@ -67,13 +66,19 @@ void gps_process(void)
 	altitude = (short)(ualt >> 13);
 
 	usats = gpsdata.sats;
+	upsm  = gpsdata.power;
+	ufix  = gpsdata.fix & 0x7;
+	// three bits for powersave, three for fix type
+	// 2x is a 2d fix, 3x is a 3d fix (none,bad,2d,3d,3d+,time only)
+	// x3 is tracking, x4 is lowpower (none,on,active,tracking,low power,inactive)
+	flags = (ufix * 10) + ((upsm >> 2) & 7);
 }
 
 void gps_update(void)
 {
 	// Need to test checksum before processing new data
 	flags = ublox_update(&gpsdata);
-	if ( !flags ) gps_process();
+	if ( 0 == flags ) gps_process();
 
 	// switch between usb and ublox on same uart
 	PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
