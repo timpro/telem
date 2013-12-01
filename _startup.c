@@ -39,8 +39,12 @@ __attribute__ ((section (".cfmconfig"))) const uint8_t _cfm[0x10] = {
 
 // ----------------------------------------------------------------------------------
 //
-// Initialize the system clocks with default  21Mhz core clock speed
-//  with divide-by-four for cpu/bus = 5.25 MHz ?
+// Initialize the system clocks with default 21Mhz core clock speed
+//  with divide-by-four for cpu = 5.25 MHz
+//  extra divide-by-four for the bus = 1.3 MHz
+//  Uart0 runs from the undivided FLL clock -- #define CORE_CLOCK 21000000
+//  RTC runs from external crystal, which is disabled to save power. 
+
 static void init_clocks(void)
 {   
     SIM_CLKDIV1 = SIM_CLKDIV1_OUTDIV1(3) | SIM_CLKDIV1_OUTDIV4(3);

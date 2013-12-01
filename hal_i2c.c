@@ -69,10 +69,9 @@ uint16_t i2c_get_ack(I2C_MemMapPtr p)
     return((p->S & I2C_S_RXAK_MASK) == 0);
 }
 
-// -------------------------------------------------
 void hal_i2c_init(I2C_MemMapPtr p)
 {
-    // Enable clocks
+    // Enable clocks: only I2C1 used
 //    SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK;
     SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;      
 //    SIM_SCGC4 |= SIM_SCGC4_I2C0_MASK;
@@ -86,7 +85,9 @@ void hal_i2c_init(I2C_MemMapPtr p)
     PORTE_PCR0 = PORT_PCR_MUX(6);
     PORTE_PCR1 = PORT_PCR_MUX(6);
 
-    // 0x14 is 48Mhz/2/80 = 300khz, changing this may fail
+    // I2C chip is rated at 100MHz, more for short bursts.
+    // 0x14 is divide-by-80, at 24Mhz bus this is 300khz - changing this may fail
+    // with 5Mhz CPU, 1.3MHz bus, I2C rate is  16 KHz: 1ms per byte is still fast enough
     p->F  = 0x14;                   // Baudrate settings:  ICR=0x14, MULT=0
     p->C1 = I2C_C1_IICEN_MASK;      // Enable:  IICEN = 1<<7
 }
@@ -98,13 +99,13 @@ void hal_i2c_deinit(I2C_MemMapPtr p)
     SIM_SCGC4 &= ~SIM_SCGC4_I2C1_MASK;
 }
 
-/*----------------------------------------------------------------------------
-*        pause: delay for i2c
- *---------------------------------------------------------------------------*/
+// I2C delay may only be needed at rates over 100KHz, assume it is NOT linked to bus speed
+#define I2C_DELAY_TIME 12
+
 static void pause(void)
 {
     int n;
-    for(n=0; n<100; n++)
+    for(n = 0; n < I2C_DELAY_TIME; n++)
         asm("nop");
 }
 
