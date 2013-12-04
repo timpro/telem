@@ -114,7 +114,7 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-unsigned short seq = 200;
+unsigned short seq = 400;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {

@@ -20,6 +20,19 @@ const char domino[96][3] = {
 // DominoEx has (stepwidth  == frequency), domino 8 or 16 is (16 / 1.024)
 #define STEP_SIZE (16)
 
+void dac_init()
+{
+	SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
+	SIM_SCGC6 |= SIM_SCGC6_DAC0_MASK;
+	DAC0_C0   |= 0x08; // Low power
+	DAC0_C0   |= 0x80; // On
+}
+
+// dummy IRQ handler
+void DAC0_IRQHandler(void){
+	asm("nop");
+};
+
 char current = 0;
 void putsym(char sym)
 {
