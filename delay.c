@@ -5,7 +5,7 @@
 
 // The basic delay(ms) is used to blink the LED for System Errors
 // and for short i2c delays. It is not time critical
-// DominoEx needs regular interrupts from the low power timer
+// DominoEx or RTTY needs regular interrupts from the low power timer
 
 // inaccurate busy wait
 void delay(unsigned int length_ms)
@@ -17,15 +17,13 @@ void delay(unsigned int length_ms)
     }
 }
 
-// domino 8 = 126, 16 = 64, 11 = 93
-#define DOMINO_DELAY 128
 
 // Timer interrupt handler
 volatile short lpt_flag = 0;
 void LPTimer_IRQHandler()
 {
     LPTMR0_CSR |=  LPTMR_CSR_TCF_MASK;   // clear the LPT timer compare flag
-    LPTMR0_CMR = DOMINO_DELAY;
+    LPTMR0_CMR = BAUD_MS;
     LPTMR0_CSR = ( LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK);
     lpt_flag = 1;
 }
@@ -35,7 +33,7 @@ void lpdelay_init(void)
 {
     SIM_SCGC5 |= SIM_SCGC5_LPTMR_MASK;  // Make sure clock is enabled
     LPTMR0_CSR = 0;                     // Reset LPTMR settings
-    LPTMR0_CMR = DOMINO_DELAY;             // Set compare value
+    LPTMR0_CMR = BAUD_MS;             // Set compare value
     enable_irq(INT_LPTimer);
     LPTMR0_PSR = LPTMR_PSR_PCS(1) | LPTMR_PSR_PBYP_MASK;
     LPTMR0_CSR = LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK;

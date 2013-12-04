@@ -8,6 +8,9 @@
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)
 
+// millisecond delay for Tx Baud rate, 20ms for  RTTY, 128/93/64ms for DominoEx8/11/16 
+#define BAUD_MS 128
+
 typedef struct {
   long  alt;
   long  lat;
@@ -72,8 +75,10 @@ short ublox_update(gps_struct  *gpsdata);
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery);
 
-// From domino.c
+// From radio.c
 void domino_tx(char);
+void rtty_tx(char);
+void thor_tx(char);
 
 // From _startup.c
 void fault(uint32_t pattern);
