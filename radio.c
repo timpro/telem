@@ -30,21 +30,22 @@ void dac_init(void)
 
 void adc_init(void)
 {
-	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK;
+	SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
 	SIM_SCGC6 |= SIM_SCGC6_ADC0_MASK;
 	ADC0_CFG1 = 0x84; // low power 12 bit
-	ADC0_CFG2 = 1 << 4; //select channel B
-	ADC0_SC2 = 0; // Nothing to see here
-	ADC0_SC3 = 0; //single shot
-	ADC0_SC1A = 0x04; // start channel 4
+	ADC0_CFG2 = 1<<4; // select channel B
+	ADC0_SC2 =  0x00; // software trigger
+	ADC0_SC3 =  0x00; // single shot
+	ADC0_SC1A = 0x04; // channel 4 start}
 }
 
-// Battery Voltage on potential divider down to 1V on ADC0_4B
+// Battery Voltage on potential divider on ADC0_4B
+// result depends on resistors and regulator
 short read_adc(void)
 {
 	short result = ADC0_R(0);
-	ADC0_SC1A = 0x04; // restart
-	return (result >> 4);
+	ADC0_SC1A = 0x04; // channel 4 restart
+	return (result >> 1);
 }
 // dummy IRQ handler
 void DAC0_IRQHandler(void){
