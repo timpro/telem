@@ -31,6 +31,7 @@ int main(void)
     mag_init();
     ublox_init();
     dac_init();
+    adc_init();
     setvbuf(stdin, NULL, _IONBF, 0);        // No buffering
 
     // Unused here, but necessary.
@@ -39,8 +40,8 @@ int main(void)
     RGB_LED( 100, 0, 0 );
 
     // Welcome banner
-    iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
-    //iprintf("Ident, Count, time, lat, lon, alt, sats, error, G, yaw, press, temp, batt *Chksum\r\n");
+    //iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
+    //iprintf("Ident, Count, time, lat, lon, alt, sats, flags, G, yaw, press, temp, batt *Chksum\r\n");
 
     lpdelay();
     RGB_LED( 0, 0, 0 );
@@ -61,7 +62,7 @@ int main(void)
 
 	pressure = get_pressure();
 	int_temp = baro_temp();
-	battery = 0;
+	battery = read_adc();
 
 	gps_output(force, compass, pressure, int_temp, battery);
 

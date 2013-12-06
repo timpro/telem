@@ -9,7 +9,7 @@
 #define CORE_CLOCK (21000000)
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
-#define BAUD_MS 22
+#define BAUD_MS 20
 
 typedef struct {
   long  alt;
@@ -79,6 +79,8 @@ void gps_output(short force, short compass, short pressure,
 void domino_tx(char);
 void rtty_tx(char);
 void dac_init(void);
+void adc_init(void);
+short read_adc(void);
 
 // From _startup.c
 void fault(uint32_t pattern);

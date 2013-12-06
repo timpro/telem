@@ -76,13 +76,13 @@ void gps_update(void)
 	if ( 0 == flags ) gps_process();
 
 	// switch between usb and ublox on same uart
-	PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
-	PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
+	// PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
+	// PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
 	// request new data
 	ublox_pvt();
-	lpdelay(); // delay only needed for usb debug
-	PORTE_PCR20 = PORT_PCR_MUX(1); // to ublox off
-	PORTA_PCR2 =  PORT_PCR_MUX(2); // to usb on
+	// lpdelay(); // delay only needed for usb debug
+	// PORTE_PCR20 = PORT_PCR_MUX(1); // to ublox off
+	// PORTA_PCR2 =  PORT_PCR_MUX(2); // to usb on
 }
 
 void ublox_init(void)
@@ -101,8 +101,8 @@ void ublox_init(void)
 
 	// allow Uart to empty queue, then switch ouput to USB.
 	lpdelay();
-        PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
-        PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
+        // PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
+        // PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
 }
 
 void sendUBX(char *data, char len )
@@ -114,7 +114,7 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-unsigned short seq = 400;
+unsigned short seq = 100;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {
@@ -123,11 +123,11 @@ void gps_output(short force, short compass, short pressure,
 
 	gps_update();
 
-	quick = (3 & seq++);
+	quick = (0 & seq++);
 	txstring[0] = 0x20;
 	txstring[1] = 0x00;
 	if (!quick)
- 		siprintf(txstring,"$$$17A,%d", seq >> 2);
+ 		siprintf(txstring,"$$$17A,%d", seq);
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
@@ -138,7 +138,7 @@ void gps_output(short force, short compass, short pressure,
 	checksum = gps_CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\r\n", txstring, checksum);
 
-	iprintf("%s",txstring);
+	//iprintf("%s",txstring);
 	char single;
 	i = 0;
 	while (len--) {

@@ -20,7 +20,7 @@ const char domino[96][3] = {
 // DominoEx has (stepwidth  == frequency), domino 8 or 16 is (16 / 1.024)
 #define STEP_SIZE (16)
 
-void dac_init()
+void dac_init(void)
 {
 	SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
 	SIM_SCGC6 |= SIM_SCGC6_DAC0_MASK;
@@ -28,6 +28,24 @@ void dac_init()
 	DAC0_C0   |= 0x80; // On
 }
 
+void adc_init(void)
+{
+	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK;
+	SIM_SCGC6 |= SIM_SCGC6_ADC0_MASK;
+	ADC0_CFG1 = 0x84; // low power 12 bit
+	ADC0_CFG2 = 1 << 4; //select channel B
+	ADC0_SC2 = 0; // Nothing to see here
+	ADC0_SC3 = 0; //single shot
+	ADC0_SC1A = 0x04; // start channel 4
+}
+
+// Battery Voltage on potential divider down to 1V on ADC0_4B
+short read_adc(void)
+{
+	short result = ADC0_R(0);
+	ADC0_SC1A = 0x04; // restart
+	return (result >> 4);
+}
 // dummy IRQ handler
 void DAC0_IRQHandler(void){
 	asm("nop");
@@ -76,4 +94,5 @@ void rtty_tx(char txchar)
 		DAC0_DAT0H = bit | HIGH_VOLTS;
 		DAC0_DAT0L = bit * 0x30;
 	}
+	lpdelay(); // extra stop bit
 }
