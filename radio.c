@@ -81,7 +81,7 @@ void domino_tx(char txchar)
 
 // Rtty shift for 300Hz is 0x130
 // Base voltage is 2<<10 for 2KHz
-#define HIGH_VOLTS (8)
+#define HIGH_VOLTS (4)
 void rtty_tx(char txchar)
 {
 	char bit;
@@ -92,8 +92,8 @@ void rtty_tx(char txchar)
 	for (i=0; i<8; i++) {
 		bit = 1 & (txchar >> i);
 		lpdelay();
-		DAC0_DAT0H = bit | HIGH_VOLTS;
-		DAC0_DAT0L = bit * 0x30;
+		DAC0_DAT0H = (bit << 1) | HIGH_VOLTS;
+		DAC0_DAT0L = 0x00; //n * bit;
 	}
 	lpdelay(); // extra stop bit
 }

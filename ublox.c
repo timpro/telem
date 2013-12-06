@@ -75,14 +75,10 @@ void gps_update(void)
 	flags = ublox_update(&gpsdata);
 	if ( 0 == flags ) gps_process();
 
-	// switch between usb and ublox on same uart
-	// PORTA_PCR2 =  PORT_PCR_MUX(1); // to usb off
-	// PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
+	PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
 	// request new data
 	ublox_pvt();
-	// lpdelay(); // delay only needed for usb debug
-	// PORTE_PCR20 = PORT_PCR_MUX(1); // to ublox off
-	// PORTA_PCR2 =  PORT_PCR_MUX(2); // to usb on
+	lpdelay(); // delay only needed for usb debug
 }
 
 void ublox_init(void)
@@ -91,26 +87,26 @@ void ublox_init(void)
 	// Use MUX(4) for UART0, but that is usb host port
         // Setup UART for Ublox input
 	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
-	PORTE_PCR21 = PORT_PCR_MUX(4); //rx
-	PORTE_PCR20 = PORT_PCR_MUX(4); //tx
-
+	PORTE_PCR21 = PORT_PCR_MUX(4); // uart tx, gps rx
+	PORTE_PCR20 = PORT_PCR_MUX(4); // uard rx, gps tx
+	lpdelay();
+	setGPS_PowerSaveMode(); // do this twice
+	lpdelay(); // 9600 baud uart sends approx 1 char per ms
 	setupGPS(); // turn off all strings
-	// May need to start in Flight Mode for mid-air reboots
 	// setGPS_DynamicMode6();
+	lpdelay();
 	setGPS_PowerSaveMode(); // Seems to work well even indoors
 
-	// allow Uart to empty queue, then switch ouput to USB.
+	// allow Uart to empty queue, perhaps
 	lpdelay();
-        // PORTE_PCR20 = PORT_PCR_MUX(1); // stop tx to gps
-        // PORTA_PCR2 =  PORT_PCR_MUX(2); // start tx to usb
 }
 
 void sendUBX(char *data, char len )
 {
-	char wakeup = 0xff;
-	//need to wake ublox, then wait 100ms (or 500?)
-	uart_write( &wakeup, 1);
-	lpdelay();
+	// char wakeup = 0xff;
+	// need to wake ublox, then wait 100ms (or 500?)
+	// uart_write( &wakeup, 1);
+	// lpdelay();
 	uart_write( data, len);
 }
 

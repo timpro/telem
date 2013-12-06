@@ -99,8 +99,8 @@ void hal_i2c_deinit(I2C_MemMapPtr p)
     SIM_SCGC4 &= ~SIM_SCGC4_I2C1_MASK;
 }
 
-// I2C delay may only be needed at rates over 100KHz, assume it is NOT linked to bus speed
-#define I2C_DELAY_TIME 12
+// proportionate I2C delay needed even at very low clock rates
+#define I2C_DELAY_TIME 100
 
 static void pause(void)
 {
