@@ -52,12 +52,12 @@ void gps_process(void)
 	altitude = (short)(ualt >> 13);
 
 	usats = gpsdata.sats;
-	upsm  = gpsdata.power;
+	upsm  = (gpsdata.power >> 2) & 0x7;
 	ufix  = gpsdata.fix & 0x7;
-	// three bits for powersave, three for fix type
+	// last digit for powersave, first digit for fix type
 	// 2x is a 2d fix, 3x is a 3d fix (none,bad,2d,3d,3d+,time only)
 	// x3 is tracking, x4 is lowpower (none,on,active,tracking,low power,inactive)
-	flags = (ufix * 10) + ((upsm >> 2) & 7);
+	flags = (ufix * 10) + upsm;
 }
 
 void gps_update(void)
@@ -74,9 +74,11 @@ void gps_update(void)
 void ublox_init(void)
 {
 	short i;
+	char wakeup = 0xff;
 
 	// Ublox needs time to wake up
-	for (i = 0; i < 26; i++)
+        uart_write( &wakeup, 1);
+	for (i = 0; i < 10; i++)
 		radio_tx(0x41 + i);
 	setupGPS(); // turn off all strings
 	radio_tx(0x30);
@@ -84,8 +86,8 @@ void ublox_init(void)
 	// ** rebooting above 12000m needs Flightmode to get lock
 	// setGPS_DynamicMode6();
 
-	setGPS_PowerSaveMode(); // Seems to work well even indoors
-	radio_tx(0x31);
+	// will not enter Powersave without a lock, try later
+	// setGPS_PowerSaveMode();
 }
 
 // need to wake ublox, then wait 100ms
@@ -100,34 +102,33 @@ void sendUBX(char *data, char len )
 	uart_write( data, len);
 }
 
-unsigned short seq = 401;
+unsigned short seq = 450;
 void gps_output(sensor_struct *sensor)
 {
 	short quick, len, i;
 	unsigned short checksum;
 
-	// check modes every 10 minutes
+	// check modes every 15 minutes
 	if ( !(seq & 63) ){
 		// check powersaving mode - may indicate reboot
-		if (0 == upsm)
-			ublox_init();
-
+		if (0 == upsm){
+			radio_tx(0x50); // P.ower
+			setGPS_PowerSaveMode();
+		}
 		// check altitude to set flight mode
 		if (altitude > 2000){
-			radio_tx(0x46);
+			radio_tx(0x46); // F.light
 			setGPS_DynamicMode6();
 		}
 		if (altitude < 1000){
-			radio_tx(0x47);
-			void setGPS_DynamicMode3();
+			radio_tx(0x47); //G.round
+			setGPS_DynamicMode3();
 		}
-		radio_tx(0x5a);
 	}
 	gps_update();
 
 	quick = (3 & seq++);
-	txstring[0] = 0x21; // "!"
-	txstring[1] = 0x00;
+	txstring[0] = 0x00; // init a null string
 	if (!quick)
  		siprintf(txstring,"$$$17A,%d", seq>>2);
 	

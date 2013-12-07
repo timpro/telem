@@ -60,6 +60,9 @@ int main(void)
 	// to allow for sample lag we need to update accelerometer just after magnetometer
 	accel_read();
 
+	// i2c reads are slow enough to upset rtty timing. Resync now
+	radio_tx(0x21);
+
 	sensor.pressure = get_pressure();
 	sensor.temperature = baro_temp();
 	sensor.battery = read_adc();
