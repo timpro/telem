@@ -43,9 +43,10 @@ int main(void)
     //iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
     //iprintf("Ident, Count, time, lat, lon, alt, sats, flags, G, yaw, press, temp, batt *Chksum\r\n");
 
-    lpdelay();
+    radio_tx(0x3c);
+    radio_tx(0x3d);
     RGB_LED( 0, 0, 0 );
-    lpdelay();
+    radio_tx(0x3e);
 
     accel_read();// preload pipeline
     for(;;) {	

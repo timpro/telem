@@ -28,6 +28,7 @@ void dac_init(void)
 	DAC0_C0   |= 0x80; // On
 }
 
+// ADC and DAC on pins E29,E30
 void adc_init(void)
 {
 	SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
@@ -35,17 +36,23 @@ void adc_init(void)
 	ADC0_CFG1 = 0x84; // low power 12 bit
 	ADC0_CFG2 = 1<<4; // select channel B
 	ADC0_SC2 =  0x00; // software trigger
-	ADC0_SC3 =  0x00; // single shot
-	ADC0_SC1A = 0x04; // channel 4 start}
+	ADC0_SC3 =  0x04; // single shot, average of 4
+	ADC0_SC1A = 0x04; // channel 4 start
 }
 
 // Battery Voltage on potential divider on ADC0_4B
 // result depends on resistors and regulator
+// 11 bits on a 2v supply would be 2/2048 => almost 1000:1
 short read_adc(void)
 {
 	short result = ADC0_R(0);
 	ADC0_SC1A = 0x04; // channel 4 restart
-	return (result >> 1);
+	//return (result >> 1);
+// Dirty Hack: with a 9:1 potential divider I need to multiply by 0.45
+	result >>= 2;
+	result *= 29;
+	return (result >> 4);
+
 }
 // dummy IRQ handler
 void DAC0_IRQHandler(void){
@@ -79,8 +86,8 @@ void domino_tx(char txchar)
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
-// Rtty shift for 300Hz is 0x130
-// Base voltage is 2<<10 for 2KHz
+// Rtty shift for 380Hz is 0x180
+// Base voltage is 1<<10 for 2KHz
 #define HIGH_VOLTS (4)
 void rtty_tx(char txchar)
 {
@@ -88,12 +95,14 @@ void rtty_tx(char txchar)
 	short i;
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
-	DAC0_DAT0H = HIGH_VOLTS; // start bit
+	DAC0_DAT0H = HIGH_VOLTS; // start
+	DAC0_DAT0L = 0x00;      //  low
 	for (i=0; i<8; i++) {
-		bit = 1 & (txchar >> i);
+		bit = 1 & txchar;
+		txchar >>= 1;
 		lpdelay();
-		DAC0_DAT0H = (bit << 1) | HIGH_VOLTS;
-		DAC0_DAT0L = 0x00; //n * bit;
+		DAC0_DAT0H = bit | HIGH_VOLTS;
+		DAC0_DAT0L = bit << 7;
 	}
 	lpdelay(); // extra stop bit
 }

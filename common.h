@@ -1,9 +1,12 @@
 
 //
 //  Copyright (c) 2012-2013 Andrew Payne <andy@payne.org>
-//
+//  Copyright (c) 2013 John  Greb: MIT licence.
 
 #include "MKL25Z4.h"
+
+// allow easy switching between different radio modes
+#define radio_tx rtty_tx
 
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)

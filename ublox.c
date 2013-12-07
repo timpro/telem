@@ -81,36 +81,40 @@ void gps_update(void)
 	lpdelay(); // delay only needed for usb debug
 }
 
+// Uart 0 on pins E20,E21
 void ublox_init(void)
 {
+	short i;
 	// Use MUX(1) to disable pins used for tx/rx
-	// Use MUX(4) for UART0, but that is usb host port
+	// Use MUX(4) for UART0, normally used for usb debug port
         // Setup UART for Ublox input
 	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
 	PORTE_PCR21 = PORT_PCR_MUX(4); // uart tx, gps rx
-	PORTE_PCR20 = PORT_PCR_MUX(4); // uard rx, gps tx
-	lpdelay();
-	setGPS_PowerSaveMode(); // do this twice
-	lpdelay(); // 9600 baud uart sends approx 1 char per ms
-	setupGPS(); // turn off all strings
-	// setGPS_DynamicMode6();
-	lpdelay();
-	setGPS_PowerSaveMode(); // Seems to work well even indoors
+	PORTE_PCR20 = PORT_PCR_MUX(4); // uart rx, gps tx
 
-	// allow Uart to empty queue, perhaps
-	lpdelay();
+	// Ublox needs time to wake up
+	for (i = 0; i < 26; i++)
+		radio_tx(64 + i);
+	setupGPS(); // turn off all strings
+	radio_tx(0x30);
+
+	// ** rebooting above 12000m needs Flightmode to get lock
+	// setGPS_DynamicMode6();
+
+	setGPS_PowerSaveMode(); // Seems to work well even indoors
+	radio_tx(0x31);
 }
 
+// need to wake ublox, then wait 100ms
 void sendUBX(char *data, char len )
 {
-	// char wakeup = 0xff;
-	// need to wake ublox, then wait 100ms (or 500?)
-	// uart_write( &wakeup, 1);
-	// lpdelay();
+	char wakeup = 0xff;
+	uart_write( &wakeup, 1);
+	radio_tx(0x2E); // perhaps 1/5th of a second
 	uart_write( data, len);
 }
 
-unsigned short seq = 100;
+unsigned short seq = 401;
 void gps_output(short force, short compass, short pressure,
 		short temperature, short battery )
 {
@@ -119,11 +123,11 @@ void gps_output(short force, short compass, short pressure,
 
 	gps_update();
 
-	quick = (0 & seq++);
-	txstring[0] = 0x20;
+	quick = (3 & seq++);
+	txstring[0] = 0x21; // "!"
 	txstring[1] = 0x00;
 	if (!quick)
- 		siprintf(txstring,"$$$17A,%d", seq);
+ 		siprintf(txstring,"$$$17A,%d", seq>>2);
 	
         siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
