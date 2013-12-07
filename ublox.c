@@ -19,15 +19,6 @@ short lat_int = 0, lat_dec = 0;
 short altitude = 0, usats = 0;
 char  ufix = 0, tslf = 0, upsm = 0, flags;
 
-#if 0
-  // Switch to/from Flight mode by altitude
-  if ( !(++tslf & 15) ) {
-      // should not need to check very often.
-      gps_check_nav();
-      gps_check_mode();
-  }
-#endif
-
 // Need to copy good values before updating
 void gps_process(void)
 {
@@ -75,10 +66,8 @@ void gps_update(void)
 	flags = ublox_update(&gpsdata);
 	if ( 0 == flags ) gps_process();
 
-	PORTE_PCR20 = PORT_PCR_MUX(4); // to ublox on
 	// request new data
 	ublox_pvt();
-	lpdelay(); // delay only needed for usb debug
 }
 
 // Uart 0 on pins E20,E21
@@ -88,13 +77,12 @@ void ublox_init(void)
 	// Use MUX(1) to disable pins used for tx/rx
 	// Use MUX(4) for UART0, normally used for usb debug port
         // Setup UART for Ublox input
-	PORTA_PCR2 =  PORT_PCR_MUX(1); // usb off
 	PORTE_PCR21 = PORT_PCR_MUX(4); // uart tx, gps rx
 	PORTE_PCR20 = PORT_PCR_MUX(4); // uart rx, gps tx
 
 	// Ublox needs time to wake up
 	for (i = 0; i < 26; i++)
-		radio_tx(64 + i);
+		radio_tx(0x40 + i);
 	setupGPS(); // turn off all strings
 	radio_tx(0x30);
 
@@ -115,12 +103,28 @@ void sendUBX(char *data, char len )
 }
 
 unsigned short seq = 401;
-void gps_output(short force, short compass, short pressure,
-		short temperature, short battery )
+void gps_output(sensor_struct *sensor)
 {
 	short quick, len, i;
 	unsigned short checksum;
 
+	// check modes every 10 minutes
+	if ( !(seq & 63) ){
+		// check powersaving mode - may indicate reboot
+		if (0 == upsm)
+			ublox_init();
+
+		// check altitude to set flight mode
+		if (altitude > 2000){
+			radio_tx(0x46);
+			setGPS_DynamicMode6();
+		}
+		if (altitude < 1000){
+			radio_tx(0x47);
+			void setGPS_DynamicMode3();
+		}
+		radio_tx(0x5a);
+	}
 	gps_update();
 
 	quick = (3 & seq++);
@@ -133,17 +137,17 @@ void gps_output(short force, short compass, short pressure,
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
 	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
 	if (!quick)
-	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, force, compass, pressure, temperature, battery);
+	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
+					sensor->pressure, sensor->temperature, sensor->battery);
 
 	checksum = gps_CRC16_checksum (txstring, len);
-	len = siprintf(txstring,"%s*%04x\r\n", txstring, checksum);
+	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
 
 	//iprintf("%s",txstring);
 	char single;
 	i = 0;
 	while (len--) {
 		single = txstring[i++];
-		//domino_tx(single);
-		rtty_tx(single);
+		radio_tx(single);
 	}
 }

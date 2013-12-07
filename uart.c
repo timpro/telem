@@ -173,17 +173,19 @@ int uart_read(char *p, int len)
 //
 void uart_init(int baud_rate)
 {
-    SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK;
-        
+    // Use Port A for USB debug, Port E for gps
+    //SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK;
+    SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
+
     // Turn on clock to UART0 module and select 48Mhz clock (FLL/PLL source)
     SIM_SCGC4 |= SIM_SCGC4_UART0_MASK;
     SIM_SOPT2 &= ~SIM_SOPT2_UART0SRC_MASK;
     SIM_SOPT2 |= SIM_SOPT2_UART0SRC(1);                 // FLL/PLL source
 
-    // Select "Alt 2" usage to enable UART0 on pins
+    // Select "Alt 2" to enable OpenSDA for UART0
     // Select "Alt 1" to disable OpenSDA from uart
     PORTA_PCR1 = PORT_PCR_MUX(1); //rx
-    PORTA_PCR2 = PORT_PCR_MUX(2); //tx
+    PORTA_PCR2 = PORT_PCR_MUX(1); //tx
 
     UART0_C2 = 0;
     UART0_C1 = 0;

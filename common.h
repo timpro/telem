@@ -15,6 +15,14 @@
 #define BAUD_MS 20
 
 typedef struct {
+  unsigned short force;
+  short compass;
+  unsigned short pressure;
+  short temperature;
+  short battery;
+} sensor_struct;
+
+typedef struct {
   long  alt;
   long  lat;
   long  lon;
@@ -75,8 +83,7 @@ short mag_compass(short ax, short ay, short az);
 // From ublox.c
 void ublox_init(void);
 short ublox_update(gps_struct  *gpsdata);
-void gps_output(short force, short compass, short pressure,
-		short temperature, short battery);
+void gps_output(sensor_struct *sensor);
 
 // From radio.c
 void domino_tx(char);

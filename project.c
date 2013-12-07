@@ -11,6 +11,7 @@
 
 extern char *_sbrk(int len);
 static char *heap_end;
+sensor_struct sensor;
 
 // Main program
 int main(void)
@@ -18,9 +19,7 @@ int main(void)
     short ax = 0;
     short ay = 0;
     short az = 4096;
-    short int_temp, battery;
-    short compass;
-    unsigned short force, pressure;
+    unsigned short force;
 
     // Initialize all modules
     uart_init(9600);
@@ -39,7 +38,6 @@ int main(void)
 
     RGB_LED( 100, 0, 0 );
 
-    // Welcome banner
     //iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
     //iprintf("Ident, Count, time, lat, lon, alt, sats, flags, G, yaw, press, temp, batt *Chksum\r\n");
 
@@ -56,16 +54,16 @@ int main(void)
 	force = magnitude( ax, ay, az );
 	force += (force >> 1) + (force >> 4);
 	force >>= 6; // force as percentage of 1G
+	sensor.force = force;
 
-	compass = mag_compass(ax, ay, az);
+	sensor.compass = mag_compass(ax, ay, az);
 	// to allow for sample lag we need to update accelerometer just after magnetometer
 	accel_read();
 
-	pressure = get_pressure();
-	int_temp = baro_temp();
-	battery = read_adc();
+	sensor.pressure = get_pressure();
+	sensor.temperature = baro_temp();
+	sensor.battery = read_adc();
 
-	gps_output(force, compass, pressure, int_temp, battery);
-
+	gps_output(&sensor);
     }
 }
