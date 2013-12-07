@@ -28,9 +28,9 @@ int main(void)
     accel_init();
     baro_init();
     mag_init();
-    ublox_init();
     dac_init();
     adc_init();
+    ublox_init();
     setvbuf(stdin, NULL, _IONBF, 0);        // No buffering
 
     // Unused here, but necessary.

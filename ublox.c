@@ -74,15 +74,10 @@ void gps_update(void)
 void ublox_init(void)
 {
 	short i;
-	// Use MUX(1) to disable pins used for tx/rx
-	// Use MUX(4) for UART0, normally used for usb debug port
-        // Setup UART for Ublox input
-	PORTE_PCR21 = PORT_PCR_MUX(4); // uart tx, gps rx
-	PORTE_PCR20 = PORT_PCR_MUX(4); // uart rx, gps tx
 
 	// Ublox needs time to wake up
 	for (i = 0; i < 26; i++)
-		radio_tx(0x40 + i);
+		radio_tx(0x41 + i);
 	setupGPS(); // turn off all strings
 	radio_tx(0x30);
 
@@ -98,7 +93,10 @@ void sendUBX(char *data, char len )
 {
 	char wakeup = 0xff;
 	uart_write( &wakeup, 1);
-	radio_tx(0x2E); // perhaps 1/5th of a second
+
+	// Timer may have overflowed by now, so this char will be corrupted.
+	// .. resync stream and give delay for ublox
+	radio_tx(0x2E);
 	uart_write( data, len);
 }
 
@@ -142,6 +140,9 @@ void gps_output(sensor_struct *sensor)
 
 	checksum = gps_CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
+
+
+	// timer delay will have overflowed by now, need to resync
 
 	//iprintf("%s",txstring);
 	char single;
