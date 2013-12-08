@@ -2,7 +2,7 @@
 // _startup.c -- Reset initialization
 //
 //  Copyright (c) 2012-2013 Andrew Payne <andy@payne.org>
-//
+//  Copyright (c) 2013 John Greb: MIT Licence
 
 #include "freedom.h"
 #include "common.h"
@@ -10,7 +10,7 @@
 #include <string.h>
 
 void _reset_init(void)    __attribute__((naked, aligned(8)));
-extern void _start(void);                   // newlib C lib initialization
+extern void _start(void); // newlib C lib initialization
 
 // ----------------------------------------------------------------------------------
 // Flash configuration field (loaded into flash memory at 0x400)
@@ -65,7 +65,7 @@ static void init_clocks(void)
 void fault(uint32_t pattern)
 {
     for(;;) {
-        RGB_LED(pattern & 1 ? 100 : 0, 0, 0);           // Set RED led based on LSB
+        RED_LED(pattern & 1);           // Set RED led based on LSB
         pattern = (pattern >> 1) | (pattern << 31);     // Rotate
         delay(100);
     }
@@ -102,8 +102,10 @@ static void __attribute__((naked)) HardFault_Handler(void)
 
 void __attribute__((naked)) _HardFault_Handler(uint32_t lr, void *psp, void *msp)
 {
+// no uart on remote device, do not try to send
+#if 0 
     hw_stackframe_t *frame;
-    
+
     // Find the active stack pointer (MSP or PSP)
     if(lr & 0x4)
         frame = psp;
@@ -112,7 +114,7 @@ void __attribute__((naked)) _HardFault_Handler(uint32_t lr, void *psp, void *msp
         
     fiprintf(stderr, "** HARD FAULT **\r\n   pc=%p\r\n  msp=%p\r\n  psp=%p\r\n", 
                     frame->pc, msp, psp);
-                    
+#endif
     fault(0b1111111000);            // Blink LED and halt
 }
 
@@ -211,27 +213,19 @@ void (* const InterruptVector[])() __attribute__ ((section(".isr_vector"))) = {
 
 // ----------------------------------------------------------------------------------
 //
-// init_led_io() -- Initialize I/O pins for on-board RGB LED (PWM)
+// init_led_io() -- Initialize I/O pin for on-board RGB LED
 //
+// may be able to disable Port B without this
 static void init_led_io(void)
 {
     // Turn on clock gating to PortB module (red and green LEDs) and 
     // leave PortD (blue)  disabled.
     SIM_SCGC5 |= SIM_SCGC5_PORTB_MASK;
 
-    SIM_SCGC6 |= SIM_SCGC6_TPM2_MASK;
-    SIM_SOPT2 |= SIM_SOPT2_TPMSRC(1);
+    PORTB_PCR18 = PORT_PCR_MUX(1);  // GPIO enable on PTB18 (red)
+    GPIOB_PDDR |= 1 << 18;	// OUTPUT
 
-    PORTB_PCR18 = PORT_PCR_MUX(3);  // TPM2_CH0 enable on PTB18 (red)
-    PORTB_PCR19 = PORT_PCR_MUX(3);  // TPM2_CH1 enable on PTB19 (green)
-
-    RGB_LED(0,0,0);                 // Off
-    
-    TPM2_MOD  = 99;
-    TPM2_C0SC = TPM_CnSC_MSB_MASK | TPM_CnSC_ELSA_MASK;
-    TPM2_C1SC = TPM_CnSC_MSB_MASK | TPM_CnSC_ELSA_MASK;
-
-    TPM2_SC   = TPM_SC_CMOD(1) | TPM_SC_PS(0);     /* Edge Aligned PWM running from BUSCLK / 1 */
+    RED_LED( 1 );                 // On
 }
 
 // ----------------------------------------------------------------------------------

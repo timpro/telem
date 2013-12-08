@@ -36,15 +36,10 @@ int main(void)
     // Unused here, but necessary.
     heap_end = _sbrk(0);
 
-    RGB_LED( 100, 0, 0 );
-
     //iprintf("\r\nBuilt: %s %s\r\n", __DATE__, __TIME__);
     //iprintf("Ident, Count, time, lat, lon, alt, sats, flags, G, yaw, press, temp, batt *Chksum\r\n");
 
-    radio_tx(0x3c);
-    radio_tx(0x3d);
-    RGB_LED( 0, 0, 0 );
-    radio_tx(0x3e);
+    RED_LED( 0 );
 
     accel_read();// preload pipeline
     for(;;) {	

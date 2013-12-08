@@ -120,7 +120,8 @@ void gps_output(sensor_struct *sensor)
 			radio_tx(0x46); // F.light
 			setGPS_DynamicMode6();
 		}
-		if (altitude < 1000){
+		// leave flight mode when good fix on the ground
+		if ((3 == ufix) && (altitude < 1000)){
 			radio_tx(0x47); //G.round
 			setGPS_DynamicMode3();
 		}

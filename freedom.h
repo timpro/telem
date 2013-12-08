@@ -6,7 +6,10 @@
 
 #include "MKL25Z4.h"                    // CPU definitions
 
-static inline void RGB_LED(int red, int green, int blue) {
-    TPM2_C0V  = red;
-    TPM2_C1V  = green;
+static inline void RED_LED(int red) {
+    if (1&red) {
+	GPIOB_PCOR |= 1 << 18; // low is on
+    } else {
+	GPIOB_PSOR |= 1 << 18; // high is off
+    }
 }
