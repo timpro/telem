@@ -53,7 +53,9 @@ static void init_clocks(void)
     MCG_C2 = (uint8_t)0; // 1 or 0 => 4MHz clock or 32K clock
 	// C3 adjusts clock speed: preset at factory (21MHz)
     MCG_C4 = (uint8_t)(MCG_C4 & ~(0xE0)); // default, 20-24Mhz clock
-    // OSC0_CR =(uint8_t)0x80; //turn ON external oscillator.
+
+    // seem to need Oscillator on to run with SDA chip off
+    OSC0_CR =(uint8_t)0x80; // turn ON external oscillator.
 
     while(!(MCG_S & MCG_S_IREFST_MASK)) {
     }

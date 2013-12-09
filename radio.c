@@ -47,28 +47,27 @@ short read_adc(void)
 {
 	short result = ADC0_R(0);
 	ADC0_SC1A = 0x04; // channel 4 restart
-	//return (result >> 1);
-// Dirty Hack: with a 9:1 potential divider I need to multiply by 0.45
-	result >>= 2;
-	result *= 29;
-	return (result >> 4);
-
+	return (result >> 1);
 }
 // dummy IRQ handler
 void DAC0_IRQHandler(void){
 	asm("nop");
 };
 
-char current = 0;
+
+// DominoEx: From RTTY testing, step 16 is 4% high
+// 5% less => 123/128 = 123 / (8 * 16)
+short current = 0;
 void putsym(char sym)
 {
 	short voltage;
-	current += 2 + (sym & 16);
+	sym = 3;
+
+	current += 2 + (sym & 15);
 	if (current > 17) current -= 18;
 	// 12 bit dac = 2v, 1kHz on NTX2 is 10 bits
 	// step = 16KHz/1024 => 16 for dominoex 8 or 16
-	// use 11 for dominoex11 or rsid 
-	voltage = (current * 16) + BASE_FREQ;
+	voltage = ((current * 989) >> 6) + BASE_FREQ;
 
 	lpdelay(); // allow previous sym to timeout
 	DAC0_DAT0H = voltage >> 8;
@@ -86,8 +85,8 @@ void domino_tx(char txchar)
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
-// Rtty shift for 380Hz is 0x180
-// Base voltage is 1<<10 for 2KHz
+// Rtty shift for 0x180 is 400Hz ( calculated as 380Hz )
+// Base voltage is 1<<10 for 1KHz ((2KHZ/V)*(2V/4))
 #define HIGH_VOLTS (4)
 void rtty_tx(char txchar)
 {
