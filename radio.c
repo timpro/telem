@@ -14,12 +14,7 @@ const char domino[96][3] = {
 	{ 1, 8, 0}, { 2, 8, 0}, { 7, 0, 0}, { 0, 8, 0}, { 2, 0, 0}, { 0,13, 0}, { 1,13, 0}, { 1,12, 0}, 
 	{ 1,15, 0}, { 1,10, 0}, { 2, 9, 0}, { 0,10,12}, { 0, 9,14}, { 0,10,13}, { 0,11, 8}, { 2, 8,10}};
 
-// Using 2V Vcc, 12bit Dac, so 1kHz on NTX2 is 10 bits
-#define BASE_FREQ (1024)
-
-// DominoEx has (stepwidth  == frequency), domino 8 or 16 is (16 / 1.024)
-#define STEP_SIZE (16)
-
+/* Analogue Section */
 void dac_init(void)
 {
 	SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
@@ -55,19 +50,18 @@ void DAC0_IRQHandler(void){
 };
 
 
-// DominoEx: From RTTY testing, step 16 is 4% high
-// 5% less => 123/128 = 123 / (8 * 16)
+// DominoEx: Very sensitive to clock frequency and supply voltage
+#define BASE_FREQ (1024)
+#define STEP_SIZE (16)
 short current = 0;
 void putsym(char sym)
 {
 	short voltage;
-	sym = 3;
-
 	current += 2 + (sym & 15);
 	if (current > 17) current -= 18;
-	// 12 bit dac = 2v, 1kHz on NTX2 is 10 bits
-	// step = 16KHz/1024 => 16 for dominoex 8 or 16
-	voltage = ((current * 989) >> 6) + BASE_FREQ;
+
+	// 12 bits on  dac is 2v, so 1kHz on NTX2 is 10 bits
+	voltage = (current * STEP_SIZE) + BASE_FREQ;
 
 	lpdelay(); // allow previous sym to timeout
 	DAC0_DAT0H = voltage >> 8;
