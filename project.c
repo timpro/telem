@@ -51,12 +51,15 @@ int main(void)
 	force >>= 6; // force as percentage of 1G
 	sensor.force = force;
 
+	// need to keep radio sync, see below
+	lpdelay();
+
 	sensor.compass = mag_compass(ax, ay, az);
 	// to allow for sample lag we need to update accelerometer just after magnetometer
 	accel_read();
 
-	// i2c reads are slow enough to upset rtty timing. Resync now
-	radio_tx(0x21);
+	// calculating  yaw takes more than 20ms.
+	lpdelay();
 
 	sensor.pressure = get_pressure();
 	sensor.temperature = baro_temp();

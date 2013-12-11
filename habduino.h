@@ -33,25 +33,23 @@
  See <http://www.gnu.org/licenses/>.
  */
 
-void sendUBX(char *MSG, char len);
+void sendUBX(char *MSG, short len);
 
 void resetGPS() {
   char set_reset[] = {
-    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94,
-    0xF5 };
+    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5 };
 
-  sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
+  sendUBX(set_reset, sizeof(set_reset));
 }
 
 void setupGPS() {
   //Turning off all GPS NMEA strings apart on the uBlox module
-  // Taken from Project Swift (rather than the old way of sending ascii text)
   char setNMEAoff[] = {
     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08,
     0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00,
     0x00, 0x00, 0xA0, 0xA9 };
 
-  sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
+  sendUBX(setNMEAoff, sizeof(setNMEAoff));
 }
 
 void setGPS_DynamicMode6()
@@ -63,7 +61,7 @@ void setGPS_DynamicMode6()
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC };
 
-    sendUBX(setdm6, sizeof(setdm6)/sizeof(uint8_t));
+    sendUBX(setdm6, sizeof(setdm6));
 }
 
 void setGPS_DynamicMode3()
@@ -75,26 +73,41 @@ void setGPS_DynamicMode3()
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76 };
 
-  sendUBX(setdm3, sizeof(setdm3)/sizeof(uint8_t));
+  sendUBX(setdm3, sizeof(setdm3));
 }
 
-void setGps_MaxPerformanceMode() {
-  //Set GPS for Max Performance Mode
+void setGPS_PowerManagement()
+{
+  char setpwrman[] = {
+    0xB5, 0x62, 0x06, 0x3B, 0x2C, 0x00, // CFG-PM2, 44bytes
+    0x01, 0x00, 0x00, 0x00, 		// version 1
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x20, 0x00, // limit current, cyclic, 8 seconds 
+    0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 16 second aquire
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+    0x00, 0x00 }; // checksum
+
+  sendUBX(setpwrman, sizeof(setpwrman));
+}
+
+void setGps_MaxPerformanceMode()
+{
   char setMax[] = { 
     0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21,
     0x91 }; // Setup for Max Power Mode
 
-  sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
+  sendUBX(setMax, sizeof(setMax));
 }
 
-uint16_t gps_CRC16_checksum (char *string, short len)
+uint16_t CRC16_checksum (char *string, short len)
 {
   uint16_t crc, i, j;
   uint8_t c;
 
   crc = 0xFFFF;
 
-  // Calculate checksum ignoring the three $s, and the *
+  // Calculate checksum ignoring three header chars
   for (i = 3; i < len; i++)
   {
     c = string[i];
@@ -111,25 +124,13 @@ uint16_t gps_CRC16_checksum (char *string, short len)
   return crc;
 }
 
-void gps_check_mode(short altitude)
-{
-    if( (altitude <500) )
-    {
-      setGPS_DynamicMode3();
-    }
-    if( (altitude >2000) )
-    {
-      setGPS_DynamicMode6();
-    }
-}
-
 void setGPS_PowerSaveMode()
 {
   char setPSM[] = { 
     0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22,
     0x92 }; // CFG-RXM Power Save Mode (Default Cyclic 1s)
 
-  sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
+  sendUBX(setPSM, sizeof(setPSM));
 }
 
 void ublox_pvt()
@@ -138,7 +139,7 @@ void ublox_pvt()
   char request[8] = {
     0xB5, 0x62, 0x01, 0x07, 0x00, 0x00, 0x08, 0x19 };
 
-  sendUBX(request, 8);
+  sendUBX(request, sizeof(request));
 }
 
 

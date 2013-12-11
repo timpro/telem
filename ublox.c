@@ -17,7 +17,7 @@ long utime = 0;
 short lon_int = 0, lon_dec = 0;
 short lat_int = 0, lat_dec = 0;
 short altitude = 0, usats = 0;
-char  ufix = 0, tslf = 0, upsm = 0, flags;
+char  ufix = 0, upsm = 0, tslf, flags;
 
 // Need to copy good values before updating
 void gps_process(void)
@@ -77,11 +77,17 @@ void ublox_init(void)
 	char wakeup = 0xff;
 
 	// Ublox needs time to wake up
-        uart_write( &wakeup, 1);
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < 8; i++) {
+		uart_write( &wakeup, 1);
 		radio_tx(0x41 + i);
+		// extra stop bit at boot
+		lpdelay();
+	}
 	setupGPS(); // turn off all strings
-	radio_tx(0x30);
+	radio_tx(0x3C);
+	radio_tx(0x3D);
+	radio_tx(0x3E);
+	setGPS_PowerManagement();
 
 	// ** rebooting above 12000m needs Flightmode to get lock
 	// setGPS_DynamicMode6();
@@ -90,27 +96,40 @@ void ublox_init(void)
 	// setGPS_PowerSaveMode();
 }
 
-// need to wake ublox, then wait 100ms
-void sendUBX(char *data, char len )
+// may need to wake ublox, then wait 100ms
+void sendUBX(char *data, short len)
 {
-	char wakeup = 0xff;
-	uart_write( &wakeup, 1);
+	short i;
+	char chk0 = 0;
+	char chk1 = 0;
+	//char wakeup = 0xff;
+	//uart_write( &wakeup, 1);
 
-	// Timer may have overflowed by now, so this char will be corrupted.
+	// Timer may have overflowed by now,
 	// .. resync stream and give delay for ublox
 	radio_tx(0x2E);
-	uart_write( data, len);
+	if (len < 8) return; // need a header and a checksum
+	uart_write( data, len - 2);
+
+	// calculate checksum, even if it was pre-calculated
+	for (i = 2; i < (len - 2); i++)
+	{
+		chk0 += data[i];
+		chk1 += chk0;
+	}
+	uart_write( &chk0, 1 );
+	uart_write( &chk1, 1 );
 }
 
-unsigned short seq = 450;
+unsigned short seq = 400;
 void gps_output(sensor_struct *sensor)
 {
 	short quick, len, i;
 	unsigned short checksum;
 
-	// check modes every 15 minutes
+	// check modes every 10 minutes
 	if ( !(seq & 63) ){
-		// check powersaving mode - may indicate reboot
+		// check powersaving mode
 		if (0 == upsm){
 			radio_tx(0x50); // P.ower
 			setGPS_PowerSaveMode();
@@ -140,7 +159,7 @@ void gps_output(sensor_struct *sensor)
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
 					sensor->pressure, sensor->temperature, sensor->battery);
 
-	checksum = gps_CRC16_checksum (txstring, len);
+	checksum = CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
 
 
