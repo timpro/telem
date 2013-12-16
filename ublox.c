@@ -26,6 +26,7 @@ void gps_process(void)
 	long ulon  = gpsdata.lon;
         // 4 bytes of latitude/longitude (1e-7)
         // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
+	// - which could be done more efficiently on the server
         if (ulon < 0) {
                 ulon -= 500;
                 ulon /= 1000;
@@ -56,7 +57,7 @@ void gps_process(void)
 	ufix  = gpsdata.fix & 0x7;
 	// last digit for powersave, first digit for fix type
 	// 2x is a 2d fix, 3x is a 3d fix (none,bad,2d,3d,3d+,time only)
-	// x3 is tracking, x4 is lowpower (none,on,active,tracking,low power,inactive)
+	// y3 is tracking, y4 is lowpower (none,on,active,tracking,low power,inactive)
 	flags = (ufix * 10) + upsm;
 }
 
@@ -161,9 +162,6 @@ void gps_output(sensor_struct *sensor)
 
 	checksum = CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
-
-
-	// timer delay will have overflowed by now, need to resync
 
 	//iprintf("%s",txstring);
 	char single;

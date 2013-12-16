@@ -1,4 +1,3 @@
-
 //
 //  Copyright (c) 2012-2013 Andrew Payne <andy@payne.org>
 //  Copyright (c) 2013 John  Greb: MIT licence.
@@ -12,8 +11,8 @@
 #define CORE_CLOCK (21000000)
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
-// low power 1Kh clock seems quite inaccurate
-#define BAUD_MS 18
+// - value needs to be one less than intended delay
+#define BAUD_MS 19
 
 typedef struct {
   unsigned short force;

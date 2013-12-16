@@ -42,6 +42,7 @@ short read_adc(void)
 {
 	short result = ADC0_R(0);
 	ADC0_SC1A = 0x04; // channel 4 restart
+	result -= result >> 4; // scale down 6%
 	return (result >> 1);
 }
 // dummy IRQ handler
@@ -79,7 +80,7 @@ void domino_tx(char txchar)
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
-// Rtty shift for 0x180 is 400Hz ( calculated as 380Hz )
+// Rtty shift for 0xC0 is 160Hz ( calculated as 190Hz )
 // Base voltage is 1<<10 for 1KHz ((2KHZ/V)*(2V/4))
 #define HIGH_VOLTS (4)
 void rtty_tx(char txchar)
@@ -94,8 +95,7 @@ void rtty_tx(char txchar)
 		bit = 1 & txchar;
 		txchar >>= 1;
 		lpdelay();
-		DAC0_DAT0H = bit | HIGH_VOLTS;
-		DAC0_DAT0L = bit << 7;
+		DAC0_DAT0L = (bit<<7)|(bit<<5);
 	}
 	lpdelay(); // extra stop bit
 }
