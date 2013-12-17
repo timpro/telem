@@ -81,8 +81,6 @@ void ublox_init(void)
 	for (i = 0; i < 8; i++) {
 		uart_write( &wakeup, 1);
 		radio_tx(0x41 + i);
-		// extra stop bit at boot
-		lpdelay();
 	}
 	setupGPS(); // turn off all strings
 	radio_tx(0x3C);

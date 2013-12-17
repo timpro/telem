@@ -1,4 +1,4 @@
-// (c) John Greb, MIT License.
+// (c) 2013 John Greb, MIT License.
 #include "common.h"
 const char domino[96][3] = {
 /* 32 */{ 0, 0, 0}, { 7,11, 0}, { 0, 8,14}, { 0,10,11}, { 0, 9,10}, { 0, 9, 9}, { 0, 8,15}, { 7,10, 0},
@@ -50,52 +50,67 @@ void DAC0_IRQHandler(void){
 	asm("nop");
 };
 
+// NTX2B Base Voltage is 1<<11 for 2KHz ((2KHZ/V)*(2V/4))
+#define HIGH_VOLTS (6)
+
 
 // DominoEx: Very sensitive to clock frequency and supply voltage
-#define BASE_FREQ (1024)
-#define STEP_SIZE (16)
+// Maximum voltage is 4095 bits, domino 8 width is 272 bits
+// Try DominoEx4 so shift is less than 8 bits
+//	but 8 Hz is 7.5  on the DAC
+#define STEP_SIZE (15 * 8)
 short current = 0;
 void putsym(char sym)
 {
 	short voltage;
-	current += 2 + (sym & 15);
+
+	// increment symbol, range centered  around zero
+	current += 2 + (sym & 0xf);
 	if (current > 17) current -= 18;
 
-	// 12 bits on  dac is 2v, so 1kHz on NTX2 is 10 bits
-	voltage = (current * STEP_SIZE) + BASE_FREQ;
+	// round step down to 8 bits
+	voltage = (current * STEP_SIZE) >> 4;
 
 	lpdelay(); // allow previous sym to timeout
-	DAC0_DAT0H = voltage >> 8;
-	DAC0_DAT0L = voltage & 0xff;
+	DAC0_DAT0H = (char)HIGH_VOLTS;
+	DAC0_DAT0L = (char)(voltage & 0xff);
 }
 
 void domino_tx(char txchar)
 {
 	short tx = txchar & 127; // short character set
+
+	tx = 65;
+
 	if (10 == tx) tx = 127; // move newline
-	if (tx < 32) return; // control char
+	if (tx < 32) return; // no control chars
 	tx -= 32;
 	putsym( domino[tx][0] );
 	if (domino[tx][1]) putsym( domino[tx][1] );
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
-// Rtty shift for 0xC0 is 160Hz ( calculated as 190Hz )
-// Base voltage is 1<<10 for 1KHz ((2KHZ/V)*(2V/4))
-#define HIGH_VOLTS (4)
+// Rtty shift for 0xA0 is 160Hz ( ish )
+//  bit shift for 240Hz is (0xF0)
+// Base voltage is 1<<11 for 2KHz ((2KHZ/V)*(2V/4))
+#define HIGH_VOLTS (6)
 void rtty_tx(char txchar)
 {
 	char bit;
 	short i;
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
-	DAC0_DAT0H = HIGH_VOLTS; // start
-	DAC0_DAT0L = 0x00;      //  low
+	DAC0_DAT0H = (char)HIGH_VOLTS; // start
+	DAC0_DAT0L = (char)0x00;      //  low
 	for (i=0; i<8; i++) {
 		bit = 1 & txchar;
 		txchar >>= 1;
 		lpdelay();
-		DAC0_DAT0L = (bit<<7)|(bit<<5);
+
+//		DAC0_DAT0H = HIGH_VOLTS | bit;
+		// 240 shift, 0xE0 or 0x00
+		bit += (bit<<1) + (bit<<2);
+		DAC0_DAT0L =  (char)(bit << 5);
 	}
 	lpdelay(); // extra stop bit
 }
