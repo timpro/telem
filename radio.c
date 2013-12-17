@@ -51,14 +51,12 @@ void DAC0_IRQHandler(void){
 };
 
 // NTX2B Base Voltage is 1<<11 for 2KHz ((2KHZ/V)*(2V/4))
-#define HIGH_VOLTS (6)
+#define HIGH_VOLTS (8)
 
-
-// DominoEx: Very sensitive to clock frequency and supply voltage
+// DominoEx: Very sensitive to supply/reference voltage
 // Maximum voltage is 4095 bits, domino 8 width is 272 bits
-// Try DominoEx4 so shift is less than 8 bits
-//	but 8 Hz is 7.5  on the DAC
-#define STEP_SIZE (15 * 8)
+// DominoEx4 is half of step size; DomEx16 is the same
+#define STEP_SIZE (15)
 short current = 0;
 void putsym(char sym)
 {
@@ -68,20 +66,16 @@ void putsym(char sym)
 	current += 2 + (sym & 0xf);
 	if (current > 17) current -= 18;
 
-	// round step down to 8 bits
-	voltage = (current * STEP_SIZE) >> 4;
+	voltage = (current * STEP_SIZE);
 
 	lpdelay(); // allow previous sym to timeout
-	DAC0_DAT0H = (char)HIGH_VOLTS;
+	DAC0_DAT0H = (char)(HIGH_VOLTS | (voltage>>8));
 	DAC0_DAT0L = (char)(voltage & 0xff);
 }
 
 void domino_tx(char txchar)
 {
 	short tx = txchar & 127; // short character set
-
-	tx = 65;
-
 	if (10 == tx) tx = 127; // move newline
 	if (tx < 32) return; // no control chars
 	tx -= 32;
@@ -90,10 +84,8 @@ void domino_tx(char txchar)
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
-// Rtty shift for 0xA0 is 160Hz ( ish )
-//  bit shift for 240Hz is (0xF0)
-// Base voltage is 1<<11 for 2KHz ((2KHZ/V)*(2V/4))
-#define HIGH_VOLTS (6)
+// Rtty shift for 0xA0 is 170Hz
+//  bit shift for 240Hz is (0xE0)
 void rtty_tx(char txchar)
 {
 	char bit;

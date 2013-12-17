@@ -5,7 +5,7 @@
 #include "MKL25Z4.h"
 
 // allow easy switching between different radio modes
-// options : radio_tty, domino_tx
+// options : rtty_tx, domino_tx
 #define radio_tx rtty_tx
 
 // core clock for Uart -- check against _startup settings
@@ -13,7 +13,7 @@
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
 // - value needs to be one less than intended delay
-#define BAUD_MS (21)
+#define BAUD_MS (19)
 
 typedef struct {
   unsigned short force;
