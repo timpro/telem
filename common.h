@@ -6,14 +6,14 @@
 
 // allow easy switching between different radio modes
 // options : rtty_tx, domino_tx
-#define radio_tx rtty_tx
+#define radio_tx domino_tx
 
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
-// - value needs to be one less than intended delay
-#define BAUD_MS (19)
+// - value needs to be one less than intended delay, and 5% less
+#define BAUD_MS (120)
 
 typedef struct {
   unsigned short force;
