@@ -34,17 +34,21 @@ inline int buf_isempty(const RingBuffer *buf)
 
 inline uint8_t buf_get_byte(RingBuffer *buf)
 {
-    const uint8_t item = buf->data[buf->head++];
+    const uint8_t item = buf->data[buf->head];
 
-    if (buf->head == buf->size)         // Wrap
+    if ((buf->head + 1) >= buf->size)         // Wrap
         buf->head = 0;
+    else
+	buf->head++;
 
     return item;
 }
 
 inline void buf_put_byte(RingBuffer *buf, uint8_t val)
 {
-    buf->data[buf->tail++] = val;
-    if (buf->tail == buf->size)
+    buf->data[buf->tail] = val;
+    if ((buf->tail + 1) >= buf->size)
         buf->tail = 0;
+    else
+	buff->tail++;
 }

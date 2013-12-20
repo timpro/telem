@@ -127,8 +127,11 @@ int uart_write(char *p, int len)
     int i;
     
     for(i=0; i<len; i++) {
-        while(buf_isfull(tx_buffer))        // Spin wait while full
-            ;
+        if (buf_isfull(tx_buffer)) {
+			// Abort if buffer is full - should never happen
+		UART0_C2 |= UART_C2_TIE_MASK;
+		return;
+	}
         buf_put_byte(tx_buffer, *p++);
         UART0_C2 |= UART_C2_TIE_MASK;           // Turn on Tx interrupts
     }
