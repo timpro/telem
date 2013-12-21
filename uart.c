@@ -130,7 +130,7 @@ int uart_write(char *p, int len)
         if (buf_isfull(tx_buffer)) {
 			// Abort if buffer is full - should never happen
 		UART0_C2 |= UART_C2_TIE_MASK;
-		return;
+		return i;
 	}
         buf_put_byte(tx_buffer, *p++);
         UART0_C2 |= UART_C2_TIE_MASK;           // Turn on Tx interrupts

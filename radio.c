@@ -92,17 +92,18 @@ void rtty_tx(char txchar)
 	short i;
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
-	DAC0_DAT0H = (char)HIGH_VOLTS; // start
-	DAC0_DAT0L = (char)0x00;      //  low
+	DAC0_DAT0H = (char)HIGH_VOLTS;// timer may have overflowed
+	DAC0_DAT0L = (char)0xE0;      // so start with a stop bit
+	lpdelay();
+	DAC0_DAT0L = (char)0xE0;      // start bit
 	for (i=0; i<8; i++) {
 		bit = 1 & txchar;
 		txchar >>= 1;
 		lpdelay();
 
-//		DAC0_DAT0H = HIGH_VOLTS | bit;
 		// 240 shift, 0xE0 or 0x00
 		bit += (bit<<1) + (bit<<2);
 		DAC0_DAT0L =  (char)(bit << 5);
 	}
-	lpdelay(); // extra stop bit
+//	lpdelay(); // extra stop bit
 }

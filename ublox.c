@@ -95,20 +95,21 @@ void ublox_init(void)
 	// setGPS_PowerSaveMode();
 }
 
-// may need to wake ublox, then wait 100ms
+// Need to wake ublox then wait 100ms, not apparent on Max7C
+// Do it anyway
 void sendUBX(char *data, short len)
 {
 	short i;
 	char chk0 = 0;
 	char chk1 = 0;
-	//char wakeup = 0xff;
-	//uart_write( &wakeup, 1);
+	char wakeup = 0xff;
+	uart_write( &wakeup, 1);
 
 	// Timer may have overflowed by now,
 	// .. resync stream and give delay for ublox
-	radio_tx(0x2E);
+	radio_tx(0x7E);  // mostly stop bits
 	if (len < 8) return; // need a header and a checksum
-	uart_write( data, len - 2);
+	uart_write( data, len - 2); // length includes checksum
 
 	// calculate checksum, even if it was pre-calculated
 	for (i = 2; i < (len - 2); i++)

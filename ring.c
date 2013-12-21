@@ -50,5 +50,5 @@ inline void buf_put_byte(RingBuffer *buf, uint8_t val)
     if ((buf->tail + 1) >= buf->size)
         buf->tail = 0;
     else
-	buff->tail++;
+	buf->tail++;
 }

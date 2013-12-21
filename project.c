@@ -1,7 +1,4 @@
 //
-// demo.c -- Simple demonstration program
-//
-//  Copyright (c) 2012-2013 Andrew Payne <andy@payne.org>
 //  Copyright (c) 2013-2014 John Greb <github.com/hexameron>
 //
 

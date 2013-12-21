@@ -110,8 +110,7 @@ uint16_t CRC16_checksum (char *string, short len)
   // Calculate checksum ignoring three header chars
   for (i = 3; i < len; i++)
   {
-    c = string[i];
-    //  crc = _crc_xmodem_update (crc, c);
+	c = string[i];
         crc = crc ^ ((uint16_t)c << 8);
         for (j=0; j<8; j++)
         {
