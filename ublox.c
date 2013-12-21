@@ -10,7 +10,7 @@
 #include "habduino.h"
 
 // output buffer. Needs to be large enough for sprintf output
-char txstring[80];
+char txstring[100];
 
 gps_struct gpsdata;
 long utime = 0;
