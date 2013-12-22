@@ -9,9 +9,6 @@
 #include "common.h"
 #include "habduino.h"
 
-// output buffer. Needs to be large enough for sprintf output
-char txstring[100];
-
 gps_struct gpsdata;
 long utime = 0;
 short lon_int = 0, lon_dec = 0;
@@ -84,7 +81,7 @@ void ublox_init(void)
 		radio_tx(0x30 + i);
 	}
 	setupGPS(); // turn off all strings
-	radio_tx(0x7E);
+	radio_tx(0x0A);
 	setGPS_PowerManagement();
 
 	// ** rebooting above 12000m needs Flightmode to get lock
@@ -153,8 +150,7 @@ void myprintf(short s, short d)
 unsigned short seq = 400;
 void gps_output(sensor_struct *sensor)
 {
-	short quick, len, i;
-	unsigned short checksum;
+	short quick;
 
 	// check modes every 10 minutes
 	if ( !(seq & 63) ){
@@ -177,7 +173,6 @@ void gps_output(sensor_struct *sensor)
 	gps_update();
 
 	quick = (3 & seq++);
-	txstring[0] = 0x00; // init a null string
 	if (!quick){
 //		siprintf(txstring,"$$$17A,%d", seq>>2);
 		radio_tx(0x24);
@@ -218,18 +213,21 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2c);
 
 
-	if (!quick)
-	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
-					sensor->pressure, sensor->temperature, sensor->battery);
+	if (!quick) {
+//	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
+//					sensor->pressure, sensor->temperature, sensor->battery);
+	myprintf( sensor->force, 1 );
+	radio_tx(0x2c);
+	myprintf( sensor->compass, 3 );
+	radio_tx(0x2c);
+	myprintf( sensor->pressure, 1 );
+	radio_tx(0x2c);
+	myprintf( sensor->temperature, 1 );
+	radio_tx(0x2c);
+	myprintf( sensor->battery, 1 );
+	}
+	radio_tx(0x2a);
 
 //	checksum = CRC16_checksum (txstring, len);
-	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
-
-	//iprintf("%s",txstring);
-	char single;
-	i = 0;
-	while (len--) {
-		single = txstring[i++];
-		radio_tx(single);
-	}
+	radio_tx(0x0a);
 }
