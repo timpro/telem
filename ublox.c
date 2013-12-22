@@ -121,6 +121,37 @@ void sendUBX(char *data, short len)
 	uart_write( &chk1, 1 );
 }
 
+// Avoid possible deadlock in siprintf()
+void myprintf(short s, short d)
+{
+	short z, y, x, p, e;
+	radio_tx(0x2c);
+	if ( s<0 ) {
+		s = -s;
+		radio_tx(0x2d);
+	}
+	e = 1; // number of digits
+	x = 1; // scale
+	while (s >= x*10) {
+		x *= 10;
+		e++;
+	}
+	if (e < d) e = d;
+	while (--e >= 0){
+		p = 0;
+		x = 1;
+		y = s;
+		z = 0;
+		while (z++ < e) x *= 10;
+		while (y >= x) {
+			p++;
+			y -= x;
+		}
+		s = y;
+		radio_tx(0x30 + (char)(p&15));
+	}
+}
+
 unsigned short seq = 400;
 void gps_output(sensor_struct *sensor)
 {
@@ -152,7 +183,7 @@ void gps_output(sensor_struct *sensor)
 	if (!quick)
  		siprintf(txstring,"$$$17A,%d", seq>>2);
 	
-        siprintf(txstring,"%s,%02d%02d%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
+        siprintf(txstring,"%s,%02d:%02d:%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
         siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
 	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
 	if (!quick)
@@ -169,4 +200,5 @@ void gps_output(sensor_struct *sensor)
 		single = txstring[i++];
 		radio_tx(single);
 	}
+	myprintf(altitude, 3);
 }
