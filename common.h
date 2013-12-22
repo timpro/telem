@@ -4,10 +4,6 @@
 
 #include "MKL25Z4.h"
 
-// allow easy switching between different radio modes
-// options : rtty_tx, domino_tx
-#define radio_tx rtty_tx
-
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)
 
@@ -87,8 +83,8 @@ short ublox_update(gps_struct  *gpsdata);
 void gps_output(sensor_struct *sensor);
 
 // From radio.c
-void domino_tx(char);
-void rtty_tx(char);
+void sendChecksum(short);
+void radio_tx(char);
 void dac_init(void);
 void adc_init(void);
 short read_adc(void);

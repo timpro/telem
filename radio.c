@@ -107,3 +107,39 @@ void rtty_tx(char txchar)
 	}
 //	lpdelay(); // extra stop bit
 }
+
+uint16_t checksum = 0xdead;
+void radio_tx(char x)
+{
+	short j;
+	uint16_t crc;
+	crc = checksum ^ ( (uint16_t)x << 8);
+	for (j = 0; j < 8; j++)
+	{
+		if (crc & 0x8000)
+			crc = (crc << 1) ^ 0x1021;
+		else
+			crc <<= 1;
+	}
+	checksum = crc;
+	rtty_tx(x);
+}
+
+void sendChecksum(short flag)
+{
+	char x,y;
+	if (!flag) {
+		checksum = 0xffff;
+		return;
+	}
+	y = 16;
+	rtty_tx( 0x2a );
+	while ( y > 0 ) {
+		y -=4 ;
+		x = (char)( (checksum >> y) & 0x000f );
+		if (x > 9) x+= (65 - 48 - 10);
+		x += 48;
+		rtty_tx( x );
+	}
+}
+

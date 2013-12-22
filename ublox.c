@@ -174,9 +174,11 @@ void gps_output(sensor_struct *sensor)
 
 	quick = (3 & seq++);
 	if (!quick){
-//		siprintf(txstring,"$$$17A,%d", seq>>2);
+//		siprintf(txstring,"$$17A,%d", seq>>2);
 		radio_tx(0x24);
 		radio_tx(0x24);
+
+		sendChecksum(0);
 		radio_tx(0x31);
 		radio_tx(0x37);
 		radio_tx(0x41);
@@ -187,13 +189,11 @@ void gps_output(sensor_struct *sensor)
 	}
 
 	myprintf( (char)(utime>>16)&31,2 );
-	radio_tx(0x3a);
+//	radio_tx(0x3a);
 	myprintf( (char)(utime>>8)&63, 2 );
-	radio_tx(0x3a);
+//	radio_tx(0x3a);
 	myprintf( (char)(utime>>0)&63, 2 );
 	radio_tx(0x2c);
-
-//	siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
 
 	myprintf( lat_int, 1 );
 	radio_tx(0x2e);
@@ -203,19 +203,15 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2e);
 	myprintf( lon_dec, 4 );
 	radio_tx(0x2c);
-
-//	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
 	myprintf( altitude, 3 );
+
+	if (!quick)
+	{
 	radio_tx(0x2c);
 	myprintf( usats, 1 );
 	radio_tx(0x2c);
 	myprintf( flags, 2 );
 	radio_tx(0x2c);
-
-
-	if (!quick) {
-//	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
-//					sensor->pressure, sensor->temperature, sensor->battery);
 	myprintf( sensor->force, 1 );
 	radio_tx(0x2c);
 	myprintf( sensor->compass, 3 );
@@ -225,8 +221,8 @@ void gps_output(sensor_struct *sensor)
 	myprintf( sensor->temperature, 1 );
 	radio_tx(0x2c);
 	myprintf( sensor->battery, 1 );
+	sendChecksum(1);
 	}
-	radio_tx(0x2a);
 
 //	checksum = CRC16_checksum (txstring, len);
 	radio_tx(0x0a);
