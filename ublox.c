@@ -125,7 +125,6 @@ void sendUBX(char *data, short len)
 void myprintf(short s, short d)
 {
 	short z, y, x, p, e;
-	radio_tx(0x2c);
 	if ( s<0 ) {
 		s = -s;
 		radio_tx(0x2d);
@@ -180,11 +179,37 @@ void gps_output(sensor_struct *sensor)
 
 	quick = (3 & seq++);
 	txstring[0] = 0x00; // init a null string
-	if (!quick)
- 		siprintf(txstring,"$$$17A,%d", seq>>2);
-	
-        siprintf(txstring,"%s,%02d:%02d:%02d",txstring, (char)(utime>>16)&31, (char)(utime>>8)&63, (char)utime&63 );
-        siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
+	if (!quick){
+//		siprintf(txstring,"$$$17A,%d", seq>>2);
+		radio_tx(0x24);
+		radio_tx(0x24);
+		radio_tx(0x31);
+		radio_tx(0x37);
+		radio_tx(0x41);
+		radio_tx(0x2c);
+
+		myprintf( seq >> 2, 2 );
+		radio_tx(0x2c);
+	}
+
+	myprintf( (char)(utime>>16)&31,2 );
+	radio_tx(0x3a);
+	myprintf( (char)(utime>>8)&63, 2 );
+	radio_tx(0x3a);
+	myprintf( (char)(utime>>0)&63, 2 );
+	radio_tx(0x2c);
+
+//	siprintf(txstring,"%s,%d.%04d,%d.%04d",txstring, lat_int, lat_dec, lon_int, lon_dec );
+
+	myprintf( lat_int, 1 );
+	radio_tx(0x2e);
+	myprintf( lat_dec, 4 );
+	radio_tx(0x2c);
+	myprintf( lon_int, 1 );
+	radio_tx(0x2e);
+	myprintf( lon_dec, 4 );
+	radio_tx(0x2c);
+
 	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
 	if (!quick)
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
@@ -200,5 +225,4 @@ void gps_output(sensor_struct *sensor)
 		single = txstring[i++];
 		radio_tx(single);
 	}
-	myprintf(altitude, 3);
 }
