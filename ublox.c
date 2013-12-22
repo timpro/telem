@@ -77,15 +77,14 @@ void ublox_init(void)
 	short i;
 	char wakeup = 0xff;
 
+	radio_tx(0x7E);
 	// Ublox needs time to wake up
 	for (i = 0; i < 8; i++) {
 		uart_write( &wakeup, 1);
-		radio_tx(0x41 + i);
+		radio_tx(0x30 + i);
 	}
 	setupGPS(); // turn off all strings
-	radio_tx(0x3C);
-	radio_tx(0x3D);
-	radio_tx(0x3E);
+	radio_tx(0x7E);
 	setGPS_PowerManagement();
 
 	// ** rebooting above 12000m needs Flightmode to get lock
@@ -210,12 +209,20 @@ void gps_output(sensor_struct *sensor)
 	myprintf( lon_dec, 4 );
 	radio_tx(0x2c);
 
-	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
+//	len = siprintf(txstring, "%s,%d,%d,%d,", txstring, altitude, usats, flags );
+	myprintf( altitude, 3 );
+	radio_tx(0x2c);
+	myprintf( usats, 1 );
+	radio_tx(0x2c);
+	myprintf( flags, 2 );
+	radio_tx(0x2c);
+
+
 	if (!quick)
 	        len = siprintf(txstring,"%s%d,%d,%d,%d,%d", txstring, sensor->force, sensor->compass,
 					sensor->pressure, sensor->temperature, sensor->battery);
 
-	checksum = CRC16_checksum (txstring, len);
+//	checksum = CRC16_checksum (txstring, len);
 	len = siprintf(txstring,"%s*%04x\n", txstring, checksum);
 
 	//iprintf("%s",txstring);
