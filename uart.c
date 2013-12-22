@@ -37,7 +37,8 @@ char NAV_PVT[92];  //everything you need in one function.
  *	5: checked size byte
  *	6: read that many bytes + 2 for checksum
  */
-short pos, type, count;
+short pos = 0;
+short count = 0;
 void UART0_IRQHandler()
 {
     int status;
@@ -68,14 +69,12 @@ void UART0_IRQHandler()
 		case 3: if (0x07 == inbyte) pos++;
 			  else pos = 0;
 			break;
-		case 4: if (0x54 == inbyte) {
-				pos++;
-				type = 0;
-			} else pos = 0;
+		case 4: if (0x54 == inbyte) pos++;
+			  else pos = 0;
 			break;
 		case 5: if (0x00 == inbyte) {
-					pos++;
-					count = 0;
+				pos++;
+				count = 0;
 			} else pos = 0;
 			break;
 		case 6: NAV_PVT[count++] = inbyte;

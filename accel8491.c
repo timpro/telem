@@ -25,7 +25,7 @@ void accel_read()
     // 8491 needs 0.9ms to power on for every read.
     MMA8491Q_Enable();
     do {
-	delay (1); // FIXME: 1ms  busy wait, using low power timer.
+	delay (1); // FIXME: 1ms  busy wait, approx
 	status = hal_i2c_read(I2C1_B, MMA8491_ADD, MMA8491_STATUS);
     } while ( --loops && !status );
 

@@ -117,11 +117,10 @@ void sendUBX(char *data, short len)
 	uart_write( &chk1, 1 );
 }
 
-// Avoid possible deadlock in siprintf()
 void myprintf(short s, short d)
 {
 	short z, y, x, p, e;
-	if ( s<0 ) {
+	if ( s < 0 ) {
 		s = -s;
 		radio_tx(0x2d);
 	}

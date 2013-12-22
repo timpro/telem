@@ -11,7 +11,7 @@
 void delay(unsigned int length_ms)
 {
     short i;
-    while (--length_ms){
+    while (length_ms--){
 	for (i=0; i<1000; i++)
 		asm("nop");
     }
