@@ -50,15 +50,14 @@ short findArcsin( short scalar, unsigned short mag );
 
 // From uart.c
 void UART0_IRQHandler() __attribute__((interrupt("IRQ")));
-int uart_write(char *p, int len);
-int uart_write_err(char *p, int len);
-int uart_read(char *p, int len);
+short uart_write(char *p, short len);
+short uart_read(char *p, short len);
 void uart_init(int baud_rate);
 
 // From delay.c
 void lpdelay_init(void);
 void lpdelay(void);
-void delay(unsigned int ms);
+void delay(short ms);
 
 // From accel.c
 void accel_init(void);

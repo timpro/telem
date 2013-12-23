@@ -58,16 +58,6 @@ void gps_process(void)
 	flags = (ufix * 10) + upsm;
 }
 
-void gps_update(void)
-{
-	// Need to test checksum before processing new data
-	flags = ublox_update(&gpsdata);
-	if ( 0 == flags ) gps_process();
-
-	// request new data
-	ublox_pvt();
-}
-
 // Uart 0 on pins E20,E21
 void ublox_init(void)
 {
@@ -92,18 +82,15 @@ void ublox_init(void)
 }
 
 // Need to wake ublox then wait 100ms, not apparent on Max7C
-// Do it anyway
 void sendUBX(char *data, short len)
 {
 	short i;
 	char chk0 = 0;
 	char chk1 = 0;
+
 	char wakeup = 0xff;
 	uart_write( &wakeup, 1);
 
-	// Timer may have overflowed by now,
-	// .. resync stream and give delay for ublox
-	radio_tx(0x7E);  // mostly stop bits
 	if (len < 8) return; // need a header and a checksum
 	uart_write( data, len - 2); // length includes checksum
 
@@ -117,6 +104,7 @@ void sendUBX(char *data, short len)
 	uart_write( &chk1, 1 );
 }
 
+// replacing newlib version
 void myprintf(short s, short d)
 {
 	short z, y, x, p, e;
@@ -151,6 +139,8 @@ void gps_output(sensor_struct *sensor)
 {
 	short quick;
 
+	radio_tx(0x7E);  // mostly stop bits
+
 	// check modes every 10 minutes
 	if ( !(seq & 63) ){
 		// check powersaving mode
@@ -169,9 +159,8 @@ void gps_output(sensor_struct *sensor)
 			setGPS_DynamicMode3();
 		}
 	}
-	gps_update();
 
-	quick = (3 & seq++);
+	quick = (0 & seq++);
 	if (!quick){
 //		siprintf(txstring,"$$17A,%d", seq>>2);
 		radio_tx(0x24);
@@ -183,9 +172,12 @@ void gps_output(sensor_struct *sensor)
 		radio_tx(0x41);
 		radio_tx(0x2c);
 
-		myprintf( seq >> 2, 2 );
+		myprintf( seq, 2 );
 		radio_tx(0x2c);
 	}
+
+	flags = ublox_update(&gpsdata);
+        if ( 0 == flags ) gps_process();
 
 	myprintf( (char)(utime>>16)&31,2 );
 //	radio_tx(0x3a);
@@ -203,6 +195,8 @@ void gps_output(sensor_struct *sensor)
 	myprintf( lon_dec, 4 );
 	radio_tx(0x2c);
 	myprintf( altitude, 3 );
+
+	ublox_pvt();
 
 	if (!quick)
 	{

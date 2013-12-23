@@ -41,7 +41,7 @@ short pos = 0;
 short count = 0;
 void UART0_IRQHandler()
 {
-    int status;
+    short status;
     char inbyte;
     status = UART0_S1;
     
@@ -121,9 +121,9 @@ short ublox_update(gps_struct *gpsdata)
 	return 0;
 }
 
-int uart_write(char *p, int len)
+short uart_write(char *p, short len)
 {
-    int i;
+    short i;
     
     for(i=0; i<len; i++) {
         if (buf_isfull(tx_buffer)) {
@@ -137,29 +137,12 @@ int uart_write(char *p, int len)
     return len;
 }
 
-// A blocking write, useful for error/crash/debug reporting
-int uart_write_err(char *p, int len)
+short uart_read(char *p, short len)
 {
-    int i;
-    
-    __disable_irq();
-    for(i=0; i<len; i++) {
-        while((UART0_S1 & UART_S1_TDRE_MASK) == 0)  // Wait until transmit buffer empty
-            ;
-        
-        UART0_D = *p++;                     // Send char
-    }
-    __enable_irq();
-    return len;
-}
-
-int uart_read(char *p, int len)
-{
-    int i = len;
+    short i = len;
 
     while(i > 0) {
-        while(buf_isempty(rx_buffer))           // Spin wait
-            ;
+        if (buf_isempty(rx_buffer)) return (len -i); // Do not wait
 
         *p++ = buf_get_byte(rx_buffer);
         UART0_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt

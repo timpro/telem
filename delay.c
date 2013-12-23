@@ -8,10 +8,10 @@
 // DominoEx or RTTY needs regular interrupts from the low power timer
 
 // inaccurate busy wait
-void delay(unsigned int length_ms)
+void delay(short length_ms)
 {
     short i;
-    while (length_ms--){
+    while (length_ms-- > 0){
 	for (i=0; i<1000; i++)
 		asm("nop");
     }

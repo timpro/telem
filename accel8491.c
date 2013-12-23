@@ -23,6 +23,7 @@ void accel_read()
     short   loops = 10; // allow for variable delay
 
     // 8491 needs 0.9ms to power on for every read.
+    // at low clock rates, i2c speed causes enough delay
     MMA8491Q_Enable();
     do {
 	delay (1); // FIXME: 1ms  busy wait, approx
