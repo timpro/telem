@@ -7,14 +7,12 @@
 
 #include "common.h"
 
-// Circular buffers for transmit and receive
-#define BUFLEN 128
-
-static uint8_t _tx_buffer[sizeof(RingBuffer) + BUFLEN] __attribute__ ((aligned(4)));
-static uint8_t _rx_buffer[sizeof(RingBuffer) + BUFLEN] __attribute__ ((aligned(4)));
+// Circular buffers for transmit (Receive is processed on arrival)
+static uint8_t _tx_buffer[sizeof(RingBuffer)] __attribute__ ((aligned(4)));
+//static uint8_t _rx_buffer[sizeof(RingBuffer)] __attribute__ ((aligned(4)));
 
 static RingBuffer *const tx_buffer = (RingBuffer *) &_tx_buffer;
-static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
+//static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
 
 // Buffers for Ublox replies
 char NAV_PVT[92];  //everything you need in one function.
@@ -39,14 +37,20 @@ char NAV_PVT[92];  //everything you need in one function.
  */
 short pos = 0;
 short count = 0;
-void UART0_IRQHandler()
+void __attribute__((interrupt("IRQ"))) UART0_IRQHandler()
 {
-    short status;
-    char inbyte;
+    uint8_t status;
+    uint8_t inbyte;
     status = UART0_S1;
     
     // If transmit data register empty, and data in the transmit buffer,
     // send it.  If it leaves the buffer empty, disable the transmit interrupt.
+
+    // Fairly bulletproof - uart disables interrupts when tx is empty, only moves head
+    //   Ublox request turns interrupts back on when finished writing, only moves tail
+    //   Data only arives after request is finished, to be processed immediately.
+    // Should be little chance of overlap, after startup sequence. 
+
     if ((status & UART_S1_TDRE_MASK) && !buf_isempty(tx_buffer)) {
         UART0_D = buf_get_byte(tx_buffer);
         if(buf_isempty(tx_buffer))
@@ -132,15 +136,15 @@ short uart_write(char *p, short len)
 		return i;
 	}
         buf_put_byte(tx_buffer, *p++);
-        UART0_C2 |= UART_C2_TIE_MASK;           // Turn on Tx interrupts
     }
+    UART0_C2 |= UART_C2_TIE_MASK;  // Turn on Tx interrupts at end of buffer fill
     return len;
 }
 
 short uart_read(char *p, short len)
 {
     short i = len;
-
+#if 0
     while(i > 0) {
         if (buf_isempty(rx_buffer)) return (len -i); // Do not wait
 
@@ -148,6 +152,7 @@ short uart_read(char *p, short len)
         UART0_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt
         i--;
     }
+#endif
     return len - i;
 }
 
@@ -189,8 +194,8 @@ void uart_init(int baud_rate)
     UART0_BDL = (divisor & UARTLP_BDL_SBR_MASK);
 
     // Initialize transmit and receive circular buffers
-    buf_reset(tx_buffer, BUFLEN);
-    buf_reset(rx_buffer, BUFLEN);
+    buf_reset(tx_buffer, BUFFSIZE);
+//    buf_reset(rx_buffer, BUFFSIZE);
 
     // Enable the transmitter, receiver, and receive interrupts
     UART0_C2 = UARTLP_C2_RE_MASK | UARTLP_C2_TE_MASK | UART_C2_RIE_MASK;

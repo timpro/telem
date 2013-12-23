@@ -49,7 +49,6 @@ short upness(short x, short y, short z);
 short findArcsin( short scalar, unsigned short mag );
 
 // From uart.c
-void UART0_IRQHandler() __attribute__((interrupt("IRQ")));
 short uart_write(char *p, short len);
 short uart_read(char *p, short len);
 void uart_init(int baud_rate);
@@ -104,17 +103,18 @@ static inline void __enable_irq(void)	{ asm volatile ("cpsie i"); }
 static inline void __disable_irq(void)  { asm volatile ("cpsid i"); }
 
 // ring.c
+#define BUFFSIZE 256
 typedef struct {
-    volatile uint16_t head;
-    volatile uint16_t tail;
-    volatile uint16_t size;
-    volatile uint8_t data[];
+    volatile short head;
+    volatile short tail;
+    volatile short size;
+    volatile uint8_t data[BUFFSIZE];
 } RingBuffer;
 
-void buf_reset(RingBuffer *buf, int size);
-int buf_len(const RingBuffer *buf);
-int buf_isfull(const RingBuffer *buf);
-int buf_isempty(const RingBuffer *buf);
+void buf_reset(RingBuffer *buf, short size);
+short buf_len(const RingBuffer *buf);
+short buf_isfull(const RingBuffer *buf);
+short buf_isempty(const RingBuffer *buf);
 uint8_t buf_get_byte(RingBuffer *buf);
 void buf_put_byte(RingBuffer *buf, uint8_t val);
 

@@ -88,8 +88,8 @@ void sendUBX(char *data, short len)
 	char chk0 = 0;
 	char chk1 = 0;
 
-	char wakeup = 0xff;
-	uart_write( &wakeup, 1);
+//	char wakeup = 0xff;
+//	uart_write( &wakeup, 1);
 
 	if (len < 8) return; // need a header and a checksum
 	uart_write( data, len - 2); // length includes checksum
@@ -141,8 +141,8 @@ void gps_output(sensor_struct *sensor)
 
 	radio_tx(0x7E);  // mostly stop bits
 
-	// check modes every 10 minutes
-	if ( !(seq & 63) ){
+	// check modes every 8 minutes
+	if ( !(seq & 31) ){
 		// check powersaving mode
 		if (0 == upsm){
 			radio_tx(0x50); // P.ower
@@ -176,13 +176,14 @@ void gps_output(sensor_struct *sensor)
 		radio_tx(0x2c);
 	}
 
+	// process data, if it has properly updated
 	flags = ublox_update(&gpsdata);
         if ( 0 == flags ) gps_process();
 
 	myprintf( (char)(utime>>16)&31,2 );
-//	radio_tx(0x3a);
+	radio_tx(0x3a);
 	myprintf( (char)(utime>>8)&63, 2 );
-//	radio_tx(0x3a);
+	radio_tx(0x3a);
 	myprintf( (char)(utime>>0)&63, 2 );
 	radio_tx(0x2c);
 
@@ -195,8 +196,6 @@ void gps_output(sensor_struct *sensor)
 	myprintf( lon_dec, 4 );
 	radio_tx(0x2c);
 	myprintf( altitude, 3 );
-
-	ublox_pvt();
 
 	if (!quick)
 	{
@@ -217,6 +216,8 @@ void gps_output(sensor_struct *sensor)
 	sendChecksum(1);
 	}
 
-//	checksum = CRC16_checksum (txstring, len);
+	// request new data
+	ublox_pvt();
+
 	radio_tx(0x0a);
 }
