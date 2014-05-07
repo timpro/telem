@@ -42,7 +42,6 @@ void DAC0_IRQHandler(void){
 #define HIGH_VOLTS (8)
 
 // Rtty shift for 0xA0 is 170Hz
-//  bit shift for 240Hz is (0xE0)
 void rtty_tx(char txchar)
 {
 	char bit;
@@ -50,7 +49,7 @@ void rtty_tx(char txchar)
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
 	DAC0_DAT0H = (char)HIGH_VOLTS;// timer may have overflowed
-	DAC0_DAT0L = (char)0xE0;      // so start with 2nd stop bit
+	DAC0_DAT0L = (char)0xA0;      // so start with 2nd stop bit
 	lpdelay();
 	DAC0_DAT0L = (char)0x00;      // start bit
 	for (i=0; i<8; i++) {
@@ -58,14 +57,43 @@ void rtty_tx(char txchar)
 		txchar >>= 1;
 		lpdelay();
 
-		// 240 shift, 0xE0 or 0x00
-		bit += (bit<<1) + (bit<<2);
-		DAC0_DAT0L =  (char)(bit << 5);
+		// 170 shift, 0xA0 or 0x00
+		DAC0_DAT0L =  (char)((bit << 1) + (bit << 3));
 	}
 //	lpdelay(); // extra stop bit
 }
 
 uint16_t checksum = 0xdead;
+uint16_t hamptr = 0;
+char 	hamchars[128];
+char	hamrtty_lut[] = {0x01,0x0e,0x14,0x1b,0x27,0x28,0x32,0x3d,0x42,0x4d,0x57,0x58,0x64,0x6b,0x71,0x7e};
+
+void hamming_tx(void)
+{
+	short j;
+	char c;
+
+	rtty_tx(127);
+	for (j = 0; j< hamptr; j++) {
+		c = hamchars[j];
+		if (c == 44 || c == 47 )
+                         c = 47 + 44 - c;
+		if ( c>=46 && c<=(48 + 9) ){
+			rtty_tx( hamrtty_lut[c - 42] );
+		} else {
+			if (c==44) c = 47;
+			if (c==10) c = 44;
+			if (c==13) c = 46;
+			c -= 32;
+			if (c>=64) c -= 32;
+			rtty_tx( hamrtty_lut[0x3 & c] );
+			c >>= 2;
+			rtty_tx( hamrtty_lut[0xf & c] );
+		}
+	}
+	hamptr = 0;
+}
+
 void radio_tx(char x)
 {
 	short j;
@@ -80,6 +108,8 @@ void radio_tx(char x)
 	}
 	checksum = crc;
 	rtty_tx(x);
+	hamchars[hamptr++] = x;
+	if (x == 0x0a) hamming_tx();
 }
 
 void sendChecksum(short flag)
@@ -97,6 +127,7 @@ void sendChecksum(short flag)
 		if (x > 9) x+= (65 - 48 - 10);
 		x += 48;
 		rtty_tx( x );
+		hamchars[hamptr++] = x;
 	}
 }
 
