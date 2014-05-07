@@ -5,7 +5,7 @@
 
 // The basic delay(ms) is used to blink the LED for System Errors
 // and for short i2c delays. It is not time critical
-// DominoEx or RTTY needs regular interrupts from the low power timer
+// RTTY needs regular interrupts from the low power timer
 
 // inaccurate busy wait
 void delay(short length_ms)

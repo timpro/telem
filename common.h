@@ -7,8 +7,8 @@
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)
 
-// millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
-// - value needs to be one less than intended delay, and 5% less
+// millisecond delay for Tx Baud rate, 20ms for  RTTY 50Hz 
+// - value needs to be one less than intended delay, and re-calibrated
 #define BAUD_MS (18)
 
 typedef struct {

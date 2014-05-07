@@ -1,13 +1,15 @@
+** Forked from Bare Metal Arm project **
+
 HAB Branch
 ==========
 
-Long distance telemetry, transmitted by FSK 434MHz USB FM:
+Long distance telemetry, transmitted by FSK 434MHz:
 
 1) Ublox GPS on Uart 0 at 9600 baud.
 2) NTX2B radio driven with 12 bit DAC
 3) Battery Volts read with 12 bit ADC
 
-The onboard regulator can be replaced with a 2.0V version for reduced power consumption. The external Crystal is disabled and clock speeds are divided down to 5.2MHz CPU, 1.3MHz bus. With DominoEx8 transmission the CPU only needs to be awake for a few cycles every second, waking on interrupts from the Uart or 8Hz timer.
+The onboard regulator can be replaced with a 2.0V version for reduced power consumption. The external Crystal is disabled and clock speeds are divided down to 5.2MHz CPU, 1.3MHz bus.
 
 Designed for 3 AAA batteries giving 24mA for 24Hrs at 24C: NTX2B needs 10 mA at over 3V; a 2V LDO regulator needs over 3V and wastes 4mA; the Ublox MAX-7C needs over 1.8V and 7mA  in full powersaving mode with a good signal, much more current when hunting satellites.
 
