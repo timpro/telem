@@ -41,7 +41,7 @@ void DAC0_IRQHandler(void){
 // NTX2B Base Voltage is 1<<11 for 2KHz ((2KHZ/V)*(2V/4))
 #define HIGH_VOLTS (8)
 
-// Rtty shift for 0xA0 is 170Hz
+// Rtty shift for 0xE0 is 240Hz
 void rtty_tx(char txchar)
 {
 	char bit;
@@ -49,7 +49,7 @@ void rtty_tx(char txchar)
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
 	DAC0_DAT0H = (char)HIGH_VOLTS;// timer may have overflowed
-	DAC0_DAT0L = (char)0xA0;      // so start with 2nd stop bit
+	DAC0_DAT0L = (char)0xE0;      // so start with 2nd stop bit
 	lpdelay();
 	DAC0_DAT0L = (char)0x00;      // start bit
 	for (i=0; i<8; i++) {
@@ -57,8 +57,8 @@ void rtty_tx(char txchar)
 		txchar >>= 1;
 		lpdelay();
 
-		// 170 shift, 0xA0 or 0x00
-		DAC0_DAT0L =  (char)((bit << 1) + (bit << 3));
+		// 240 shift, 0xE0 or 0x00
+		DAC0_DAT0L =  (char)((bit << 5)+(bit << 6)+(bit << 7));
 	}
 //	lpdelay(); // extra stop bit
 }
@@ -73,7 +73,7 @@ void hamming_tx(void)
 	short j;
 	char c;
 
-	rtty_tx(127);
+	rtty_tx(0x7e);
 	for (j = 0; j< hamptr; j++) {
 		c = hamchars[j];
 		if (c == 44 || c == 47 )
@@ -92,6 +92,8 @@ void hamming_tx(void)
 		}
 	}
 	hamptr = 0;
+	hamchars[hamptr++] = 0x0a;
+	rtty_tx(0x0a);
 }
 
 void radio_tx(char x)
@@ -108,8 +110,10 @@ void radio_tx(char x)
 	}
 	checksum = crc;
 	rtty_tx(x);
+
 	hamchars[hamptr++] = x;
-	if (x == 0x0a) hamming_tx();
+	if (x == 0x0a)	hamming_tx();
+
 }
 
 void sendChecksum(short flag)
@@ -121,6 +125,7 @@ void sendChecksum(short flag)
 	}
 	y = 16;
 	rtty_tx( 0x2a );
+	hamchars[hamptr++] = 0x2a;
 	while ( y > 0 ) {
 		y -=4 ;
 		x = (char)( (checksum >> y) & 0x000f );

@@ -216,8 +216,8 @@ void gps_output(sensor_struct *sensor)
 	sendChecksum(1);
 	}
 
+	radio_tx(0x0a);
 	// request new data
 	ublox_pvt();
 
-	radio_tx(0x0a);
 }
