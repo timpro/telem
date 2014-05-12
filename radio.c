@@ -70,6 +70,7 @@ char	hamrtty_lut[] = {0x01,0x0e,0x14,0x1b,0x27,0x28,0x32,0x3d,0x42,0x4d,0x57,0x5
 
 void hamming_tx(void)
 {
+#ifdef HAMMING
 	short j;
 	char c;
 
@@ -94,6 +95,7 @@ void hamming_tx(void)
 	hamptr = 0;
 	hamchars[hamptr++] = 0x0a;
 	rtty_tx(0x0a);
+#endif
 }
 
 void radio_tx(char x)
@@ -110,10 +112,10 @@ void radio_tx(char x)
 	}
 	checksum = crc;
 	rtty_tx(x);
-
+#ifdef HAMMING
 	hamchars[hamptr++] = x;
 	if (x == 0x0a)	hamming_tx();
-
+#endif
 }
 
 void sendChecksum(short flag)
@@ -125,14 +127,18 @@ void sendChecksum(short flag)
 	}
 	y = 16;
 	rtty_tx( 0x2a );
+#ifdef HAMMING
 	hamchars[hamptr++] = 0x2a;
+#endif
 	while ( y > 0 ) {
 		y -=4 ;
 		x = (char)( (checksum >> y) & 0x000f );
 		if (x > 9) x+= (65 - 48 - 10);
 		x += 48;
 		rtty_tx( x );
+#ifdef HAMMING
 		hamchars[hamptr++] = x;
+#endif
 	}
 }
 
