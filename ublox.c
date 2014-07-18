@@ -11,7 +11,7 @@
 
 gps_struct gpsdata;
 long utime = 0;
-short lon_int = 0, lon_dec = 0;
+short lon_sign = 0, lon_int = 0, lon_dec = 0;
 short lat_int = 0, lat_dec = 0;
 short altitude = 0, usats = 0;
 char  ufix = 0, upsm = 0, tslf, flags;
@@ -25,16 +25,14 @@ void gps_process(void)
         // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
 	// - which could be done more efficiently on the server
         if (ulon < 0) {
-                ulon -= 500;
-                ulon /= 1000;
-                lon_int = (short) (ulon / 10000);
-                lon_dec = (short) ((long)lon_int*10000 - ulon);
-        } else {
-                ulon += 500;
-                ulon /= 1000;
-                lon_int = (short) (ulon / 10000);
-                lon_dec = (short) (ulon - (long)lon_int*10000);
-        }
+		lon_sign = -1;
+                ulon = -ulon;
+        } else
+		lon_sign = 1;
+        ulon += 500;
+        ulon /= 1000;
+        lon_int = (short) (ulon / 10000);
+        lon_dec = (short) (ulon - (long)lon_int*10000);
 
 	long ulat  = gpsdata.lat;
 	ulat += 500;
@@ -189,6 +187,8 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2e);
 	myprintf( lat_dec, 4 );
 	radio_tx(0x2c);
+	if ( lon_sign < 0 )
+		radio_tx(0x2d);
 	myprintf( lon_int, 1 );
 	radio_tx(0x2e);
 	myprintf( lon_dec, 4 );
