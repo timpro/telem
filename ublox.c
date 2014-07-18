@@ -88,11 +88,7 @@ void sendUBX(char *data, short len)
 	char chk0 = 0;
 	char chk1 = 0;
 
-	char wakeup = 0xff;
-	uart_write( &wakeup, 1);
-
 	if (len < 8) return; // need a header and a checksum
-	uart_write( data, len - 2); // length includes checksum
 
 	// calculate checksum, even if it was pre-calculated
 	for (i = 2; i < (len - 2); i++)
@@ -100,8 +96,10 @@ void sendUBX(char *data, short len)
 		chk0 += data[i];
 		chk1 += chk0;
 	}
-	uart_write( &chk0, 1 );
-	uart_write( &chk1, 1 );
+	data[i++] = chk0;
+	data[i++] = chk1;
+
+	uart_write( data, len );
 }
 
 // replacing newlib version

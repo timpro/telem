@@ -107,8 +107,8 @@ uint16_t CRC16_checksum (char *string, short len)
 
   crc = 0xFFFF;
 
-  // Calculate checksum ignoring three header chars
-  for (i = 3; i < len; i++)
+  // Calculate checksum (NO header chars)
+  for (i = 0; i < len; i++)
   {
 	c = string[i];
         crc = crc ^ ((uint16_t)c << 8);
