@@ -7,8 +7,8 @@
 // core clock for Uart -- check against _startup settings
 #define CORE_CLOCK (21000000)
 
-// millisecond delay for Tx Baud rate, 20ms for  RTTY 50Hz 
-// - value needs to be one less than intended delay, and re-calibrated
+// millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
+// - value needs to be one less than intended delay, and 5% less
 #define BAUD_MS (18)
 
 typedef struct {
@@ -49,6 +49,7 @@ short upness(short x, short y, short z);
 short findArcsin( short scalar, unsigned short mag );
 
 // From uart.c
+void UART0_IRQHandler() __attribute__((interrupt("IRQ")));
 short uart_write(char *p, short len);
 short uart_read(char *p, short len);
 void uart_init(int baud_rate);

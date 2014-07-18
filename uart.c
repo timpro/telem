@@ -195,7 +195,7 @@ void uart_init(int baud_rate)
 
     // Initialize transmit and receive circular buffers
     buf_reset(tx_buffer, BUFFSIZE);
-//    buf_reset(rx_buffer, BUFFSIZE);
+    //buf_reset(rx_buffer, BUFFSIZE);
 
     // Enable the transmitter, receiver, and receive interrupts
     UART0_C2 = UARTLP_C2_RE_MASK | UARTLP_C2_TE_MASK | UART_C2_RIE_MASK;

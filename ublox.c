@@ -88,8 +88,8 @@ void sendUBX(char *data, short len)
 	char chk0 = 0;
 	char chk1 = 0;
 
-//	char wakeup = 0xff;
-//	uart_write( &wakeup, 1);
+	char wakeup = 0xff;
+	uart_write( &wakeup, 1);
 
 	if (len < 8) return; // need a header and a checksum
 	uart_write( data, len - 2); // length includes checksum
@@ -216,8 +216,8 @@ void gps_output(sensor_struct *sensor)
 	sendChecksum(1);
 	}
 
-	radio_tx(0x0a);
 	// request new data
 	ublox_pvt();
 
+	radio_tx(0x0a);
 }
