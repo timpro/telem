@@ -11,10 +11,11 @@
 
 gps_struct gpsdata;
 long utime = 0;
-short lon_sign = 0, lon_int = 0, lon_dec = 0;
-short lat_int = 0, lat_dec = 0;
-short altitude = 0, usats = 0;
-char  ufix = 0, upsm = 0, tslf, flags;
+short lon_sign = 0;
+unsigned short lon_int = 0, lon_dec = 0;
+unsigned short lat_int = 0, lat_dec = 0;
+unsigned short altitude = 0, usats = 0;
+char  ufix = 0, upsm = 0, flags=0;
 
 // Need to copy good values before updating
 void gps_process(void)
@@ -31,21 +32,25 @@ void gps_process(void)
 		lon_sign = 1;
         ulon += 500;
         ulon /= 1000;
-        lon_int = (short) (ulon / 10000);
-        lon_dec = (short) (ulon - (long)lon_int*10000);
+        lon_int = (unsigned short) (ulon / 10000);
+        lon_dec = (unsigned short) (ulon - (long)lon_int*10000);
 
 	long ulat  = gpsdata.lat;
+	if (ulat < 0)
+		ulat = 0; //WTF
 	ulat += 500;
 	ulat /= 1000;
-	lat_int = (short) (ulat/10000);
-	lat_dec = (short) (ulat - (long)lat_int*10000) ;
+	lat_int = (unsigned short) (ulat/10000);
+	lat_dec = (unsigned short) (ulat - (long)lat_int*10000) ;
 
 	long ualt  = gpsdata.alt;
+	if (ualt < 0)
+		ualt = 0;
 	// 4 bytes of altitude above MSL (mm)
 	// Scale to meters (Within accuracy of GPS)
 	ualt >>= 8;
 	ualt *= 2097;
-	altitude = (short)(ualt >> 13);
+	altitude = (unsigned short)(ualt >> 13);
 
 	usats = gpsdata.sats;
 	upsm  = (gpsdata.power >> 2) & 0x7;
@@ -101,16 +106,13 @@ void sendUBX(char *data, short len)
 }
 
 // replacing newlib version
-void myprintf(short s, short d)
+void myprintf(unsigned short s, short d)
 {
-	short z, y, x, p, e;
-	if ( s < 0 ) {
-		s = -s;
-		radio_tx(0x2d);
-	}
+	long x;
+	short z, p, e;
 	e = 1; // number of digits
 	x = 1; // scale
-	while (s >= x*10) {
+	while (x*10 <= s) {
 		x *= 10;
 		e++;
 	}
@@ -118,16 +120,22 @@ void myprintf(short s, short d)
 	while (--e >= 0){
 		p = 0;
 		x = 1;
-		y = s;
 		z = 0;
 		while (z++ < e) x *= 10;
-		while (y >= x) {
+		while (s >= x) {
 			p++;
-			y -= x;
+			s -= x;
 		}
-		s = y;
 		radio_tx(0x30 + (char)(p&15));
 	}
+}
+
+void signprintf(short s, short d) {
+	if ( s < 0 ) {
+		s = -s;
+		radio_tx(0x2d);
+	}
+	myprintf(s, d);
 }
 
 unsigned short seq = 400;
@@ -168,7 +176,7 @@ void gps_output(sensor_struct *sensor)
 		radio_tx(0x41);
 		radio_tx(0x2c);
 
-		myprintf( seq, 2 );
+		myprintf( seq, 3 );
 		radio_tx(0x2c);
 	}
 
@@ -177,9 +185,9 @@ void gps_output(sensor_struct *sensor)
         if ( 0 == flags ) gps_process();
 
 	myprintf( (char)(utime>>16)&31,2 );
-	radio_tx(0x3a);
+	//radio_tx(0x3a);
 	myprintf( (char)(utime>>8)&63, 2 );
-	radio_tx(0x3a);
+	//radio_tx(0x3a);
 	myprintf( (char)(utime>>0)&63, 2 );
 	radio_tx(0x2c);
 
@@ -204,13 +212,13 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2c);
 	myprintf( sensor->force, 1 );
 	radio_tx(0x2c);
-	myprintf( sensor->compass, 3 );
+	signprintf( sensor->compass, 3 );
 	radio_tx(0x2c);
 	myprintf( sensor->pressure, 1 );
 	radio_tx(0x2c);
-	myprintf( sensor->temperature, 1 );
+	signprintf( sensor->temperature, 1 );
 	radio_tx(0x2c);
-	myprintf( sensor->battery, 1 );
+	signprintf( sensor->battery, 1 );
 	sendChecksum(1);
 	}
 
