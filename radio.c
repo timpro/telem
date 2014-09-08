@@ -86,6 +86,7 @@ void domino_tx(char txchar)
 
 // Rtty shift for 0xA0 is 170Hz
 //  bit shift for 240Hz is (0xE0)
+// min shift is 24Hz, (0xE)
 void rtty_tx(char txchar)
 {
 	char bit;
@@ -93,7 +94,7 @@ void rtty_tx(char txchar)
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
 	DAC0_DAT0H = (char)HIGH_VOLTS;// timer may have overflowed
-	DAC0_DAT0L = (char)0xE0;      // so start with 2nd stop bit
+	DAC0_DAT0L = (char)0xE;      // so start with 2nd stop bit
 	lpdelay();
 	DAC0_DAT0L = (char)0x00;      // start bit
 	for (i=0; i<8; i++) {
@@ -103,7 +104,7 @@ void rtty_tx(char txchar)
 
 		// 240 shift, 0xE0 or 0x00
 		bit += (bit<<1) + (bit<<2);
-		DAC0_DAT0L =  (char)(bit << 5);
+		DAC0_DAT0L =  (char)(bit << 1);
 	}
 //	lpdelay(); // extra stop bit
 }
