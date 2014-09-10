@@ -95,7 +95,7 @@ void rtty_tx(char txchar)
 	txchar |= 1<< 7; // 7N1 bits
 	lpdelay(); // delay comes FIRST
 	DAC0_DAT0H = (char)HIGH_VOLTS;// timer may have overflowed
-	DAC0_DAT0L = (char)0x50;      // so start with 2nd stop bit
+	DAC0_DAT0L = (char)0xE0;      // so start with 2nd stop bit
 	lpdelay();
 	DAC0_DAT0L = (char)0x00;      // start bit
 	for (i=0; i<8; i++) {
@@ -103,7 +103,7 @@ void rtty_tx(char txchar)
 		txchar >>= 1;
 		lpdelay();
 
-		DAC0_DAT0L =  (char)((bit << 4) + (bit << 6));
+		DAC0_DAT0L =  (char)((bit<<5)|(bit<<6)|(bit<<7));
 	}
 //	lpdelay(); // extra stop bit
 }
