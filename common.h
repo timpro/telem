@@ -9,8 +9,8 @@
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
 // - value needs to be one less than intended delay, and 5% less
-// 18 for 50Hz, 16 for 45Hz
-#define BAUD_MS (20)
+// 18 for 50Hz, 20 for 45Hz
+#define BAUD_MS (18)
 
 typedef struct {
   unsigned short force;
