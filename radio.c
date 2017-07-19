@@ -84,6 +84,7 @@ void domino_tx(char txchar)
 	if (domino[tx][2]) putsym( domino[tx][2] );
 }
 
+#if 0
 // Rtty shift for 0xA0 is 170Hz
 //  bit shift for 240Hz is (0xE0)
 void rtty_tx(char txchar)
@@ -107,6 +108,13 @@ void rtty_tx(char txchar)
 	}
 //	lpdelay(); // extra stop bit
 }
+#else
+void rtty_tx(char txchar)
+{
+	uart_write(&txchar, 1);
+	lpdelay(); 
+}
+#endif
 
 uint16_t checksum = 0xdead;
 void radio_tx(char x)

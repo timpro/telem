@@ -9,12 +9,13 @@
 
 // millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
 // - value needs to be one less than intended delay, and 5% less
-#define BAUD_MS (18)
+#define BAUD_MS (44)
 
 typedef struct {
   unsigned short force;
   short compass;
   unsigned short pressure;
+  short alt;
   short temperature;
   short battery;
 } sensor_struct;

@@ -6,6 +6,7 @@
 //
 
 #include "common.h"
+#include "freedom.h"
 
 // Circular buffers for transmit (Receive is processed on arrival)
 static uint8_t _tx_buffer[sizeof(RingBuffer)] __attribute__ ((aligned(4)));

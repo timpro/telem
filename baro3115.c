@@ -92,7 +92,8 @@ void baro_init(void)
 	char reg = BARO_CTRL1;
 
 	// Set barometer mode, for altitude use (ALT_MASK | OVERSAMP_MASK ));
-	hal_i2c_write(I2C1_B, BARO_ADD, reg++, (OVERSAMP_MASK )); 
+	hal_i2c_write(I2C1_B, BARO_ADD, reg++, (ALT_MASK | OVERSAMP_MASK )); 
+	//hal_i2c_write(I2C1_B, BARO_ADD, reg++, (OVERSAMP_MASK )); 
 	hal_i2c_write(I2C1_B, BARO_ADD, reg++, 0);
 	hal_i2c_write(I2C1_B, BARO_ADD, reg++, PP_OD12_MASK);
 	hal_i2c_write(I2C1_B, BARO_ADD, reg++, 0);

@@ -13,11 +13,12 @@ sensor_struct sensor;
 // Main program
 int main(void)
 {
+#if 0	
     short ax = 0;
     short ay = 0;
     short az = 4096;
     unsigned short force;
-
+#endif
     // Initialize all modules
     uart_init(9600);
     lpdelay_init();
@@ -40,6 +41,7 @@ int main(void)
 
     accel_read();// preload pipeline
     for(;;) {	
+#if 0
 	ax = accel_x();
 	ay = accel_y();
 	az = accel_z();
@@ -50,8 +52,8 @@ int main(void)
 	sensor.compass = mag_compass(ax, ay, az);
 	// to allow for sample lag we need to update accelerometer just after magnetometer
 	accel_read();
-
-	sensor.pressure = get_pressure();
+#endif
+	sensor.alt = baro_alt();
 	sensor.temperature = baro_temp();
 	sensor.battery = read_adc();
 

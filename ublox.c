@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "common.h"
 #include "habduino.h"
+#include "freedom.h"
 
 gps_struct gpsdata;
 long utime = 0;
@@ -21,6 +22,7 @@ char  ufix = 0, upsm = 0, flags=0;
 void gps_process(void)
 {
 	utime = gpsdata.utc;
+	unsigned long temp;
 	long ulon  = gpsdata.lon;
         // 4 bytes of latitude/longitude (1e-7)
         // divide by 1000 to leave degrees + 4 digits and +/-5m accuracy
@@ -34,6 +36,10 @@ void gps_process(void)
         ulon /= 1000;
         lon_int = (unsigned short) (ulon / 10000);
         lon_dec = (unsigned short) (ulon - (long)lon_int*10000);
+	temp = lon_dec * 6;
+	temp /= 1000;
+	lon_int = (lon_int * 100) + temp;
+	lon_dec = (lon_dec * 6) - (temp * 1000); 
 
 	long ulat  = gpsdata.lat;
 	if (ulat < 0)
@@ -42,6 +48,11 @@ void gps_process(void)
 	ulat /= 1000;
 	lat_int = (unsigned short) (ulat/10000);
 	lat_dec = (unsigned short) (ulat - (long)lat_int*10000) ;
+	temp = lat_dec * 6;
+	temp /= 1000;
+	lat_int = (lat_int * 100) + temp;
+	lat_dec = (lat_dec * 6) - (temp * 1000); 
+
 
 	long ualt  = gpsdata.alt;
 	if (ualt < 0)
@@ -141,48 +152,58 @@ void signprintf(short s, short d) {
 unsigned short seq = 400;
 void gps_output(sensor_struct *sensor)
 {
-	short quick;
-
-	radio_tx(0x7E);  // mostly stop bits
-
-	// check modes every 8 minutes
-	if ( !(seq & 31) ){
-		// check powersaving mode
-		if (0 == upsm){
-			radio_tx(0x50); // P.ower
-			setGPS_PowerSaveMode();
-		}
-		// check altitude to set flight mode
-		if (altitude > 2000){
-			radio_tx(0x46); // F.light
-			setGPS_DynamicMode6();
-		}
-		// leave flight mode when good fix on the ground
-		if ((3 == ufix) && (altitude < 1000)){
-			radio_tx(0x47); //G.round
-			setGPS_DynamicMode3();
-		}
-	}
-
-	quick = (0 & seq++);
-	if (!quick){
-//		siprintf(txstring,"$$17A,%d", seq>>2);
-		radio_tx(0x24);
-		radio_tx(0x24);
-
-		sendChecksum(0);
-		radio_tx(0x31);
-		radio_tx(0x37);
-		radio_tx(0x41);
-		radio_tx(0x2c);
-
-		myprintf( seq, 3 );
-		radio_tx(0x2c);
-	}
+	// half a second to clear uart
+	short z;
+	for (z = 0; z < 10; z++)
+		lpdelay();
+	RED_LED( 1 );
 
 	// process data, if it has properly updated
 	flags = ublox_update(&gpsdata);
         if ( 0 == flags ) gps_process();
+
+	// request new data	
+	PORTA_PCR2 = PORT_PCR_MUX(1); // uart to ublox only
+	ublox_pvt();
+
+	// check modes every 8 minutes
+	if ( !(++seq & 31) ){
+		// check powersaving mode
+		if (0 == upsm){
+			//radio_tx(0x50); // P.ower
+			setGPS_PowerSaveMode();
+		}
+		// check altitude to set flight mode
+		if (altitude > 2000){
+			//radio_tx(0x46); // F.light
+			setGPS_DynamicMode6();
+		}
+		// leave flight mode when good fix on the ground
+		if ((3 == ufix) && (altitude < 1000)){
+			//radio_tx(0x47); //G.round
+			setGPS_DynamicMode3();
+		}
+	}
+
+	for (z = 0; z < 20; z++)
+		lpdelay();
+	PORTA_PCR2 = PORT_PCR_MUX(2); // uart to usb
+
+	RED_LED( 0 );
+//	radio_tx(0x24);
+	radio_tx(0x24);
+
+	sendChecksum(0); // starts after $ delimiter
+	radio_tx(0x47);
+	radio_tx(0x50);
+	radio_tx(0x47);
+	radio_tx(0x47);
+		
+	radio_tx(0x41);
+
+	radio_tx(0x2c);
+//	myprintf( seq, 3 );
+//	radio_tx(0x2c);
 
 	myprintf( (char)(utime>>16)&31,2 );
 	//radio_tx(0x3a);
@@ -191,39 +212,53 @@ void gps_output(sensor_struct *sensor)
 	myprintf( (char)(utime>>0)&63, 2 );
 	radio_tx(0x2c);
 
-	myprintf( lat_int, 1 );
+	myprintf( lat_int, 3 );
 	radio_tx(0x2e);
-	myprintf( lat_dec, 4 );
+	myprintf( lat_dec, 3 );
 	radio_tx(0x2c);
-	if ( lon_sign < 0 )
-		radio_tx(0x2d);
-	myprintf( lon_int, 1 );
-	radio_tx(0x2e);
-	myprintf( lon_dec, 4 );
+	radio_tx(0x4e);
 	radio_tx(0x2c);
-	myprintf( altitude, 3 );
 
-	if (!quick)
-	{
+	myprintf( lon_int, 3 );
+	radio_tx(0x2e);
+	myprintf( lon_dec, 3 );
 	radio_tx(0x2c);
-	myprintf( usats, 1 );
+	radio_tx(0x57);
+	radio_tx(0x2c);
+
+	signprintf( sensor->temperature, 1 );
+	radio_tx(0x2c);	
+	myprintf( usats, 1 );	
 	radio_tx(0x2c);
 	myprintf( flags, 2 );
 	radio_tx(0x2c);
-	myprintf( sensor->force, 1 );
+	 
+#if 0
 	radio_tx(0x2c);
-	signprintf( sensor->compass, 3 );
+	myprintf( sensor->alt - 50, 3 );
 	radio_tx(0x2c);
-	myprintf( sensor->pressure, 1 );
+	radio_tx(0x4d);
+	radio_tx(0x2d);
+#else
+	myprintf( altitude, 3 );
 	radio_tx(0x2c);
-	signprintf( sensor->temperature, 1 );
+	radio_tx(0x4d);
 	radio_tx(0x2c);
-	signprintf( sensor->battery, 1 );
+#endif
+//	myprintf( usats, 1 );
+//	radio_tx(0x2c);
+//	myprintf( flags, 2 );
+//	radio_tx(0x2c);
+//	myprintf( sensor->force, 1 );
+//	radio_tx(0x2c);
+//	signprintf( sensor->compass, 3 );
+//	radio_tx(0x2c);
+//	myprintf( sensor->pressure, 1 );
+//	radio_tx(0x2c);
+//	signprintf( sensor->temperature, 1 );
+//	radio_tx(0x2c);
+//	signprintf( sensor->battery, 1 );
 	sendChecksum(1);
-	}
-
-	// request new data
-	ublox_pvt();
-
 	radio_tx(0x0a);
 }
+
