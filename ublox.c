@@ -149,14 +149,12 @@ void signprintf(short s, short d) {
 	myprintf(s, d);
 }
 
-unsigned short seq = 400;
+unsigned short seq = 0;
 void gps_output(sensor_struct *sensor)
 {
-	// half a second to clear uart
-	short z;
-	for (z = 0; z < 10; z++)
-		lpdelay();
-	RED_LED( 1 );
+	// wait a second to clear uart
+	lpdelay();
+	RED_LED( 0 );
 
 	// process data, if it has properly updated
 	flags = ublox_update(&gpsdata);
@@ -165,9 +163,10 @@ void gps_output(sensor_struct *sensor)
 	// request new data	
 	PORTA_PCR2 = PORT_PCR_MUX(1); // uart to ublox only
 	ublox_pvt();
+	lpdelay();
 
-	// check modes every 8 minutes
-	if ( !(++seq & 31) ){
+	// check modes every 3 minutes
+	if ( !(++seq & 63) ){
 		// check powersaving mode
 		if (0 == upsm){
 			//radio_tx(0x50); // P.ower
@@ -184,21 +183,17 @@ void gps_output(sensor_struct *sensor)
 			setGPS_DynamicMode3();
 		}
 	}
+	lpdelay();
 
-	for (z = 0; z < 20; z++)
-		lpdelay();
 	PORTA_PCR2 = PORT_PCR_MUX(2); // uart to usb
+	RED_LED( 1 );
 
-	RED_LED( 0 );
 //	radio_tx(0x24);
-	radio_tx(0x24);
-
 	sendChecksum(0); // starts after $ delimiter
 	radio_tx(0x47);
 	radio_tx(0x50);
 	radio_tx(0x47);
 	radio_tx(0x47);
-		
 	radio_tx(0x41);
 
 	radio_tx(0x2c);
@@ -216,35 +211,33 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2e);
 	myprintf( lat_dec, 3 );
 	radio_tx(0x2c);
-	radio_tx(0x4e);
-	radio_tx(0x2c);
+	radio_tx(0x4e); // N
 
+	radio_tx(0x2c);
 	myprintf( lon_int, 3 );
 	radio_tx(0x2e);
 	myprintf( lon_dec, 3 );
 	radio_tx(0x2c);
-	radio_tx(0x57);
-	radio_tx(0x2c);
+	radio_tx(0x57); // W
 
+	radio_tx(0x2c);
 	signprintf( sensor->temperature, 1 );
 	radio_tx(0x2c);	
 	myprintf( usats, 1 );	
 	radio_tx(0x2c);
 	myprintf( flags, 2 );
 	radio_tx(0x2c);
-	 
-#if 0
-	radio_tx(0x2c);
-	myprintf( sensor->alt - 50, 3 );
-	radio_tx(0x2c);
-	radio_tx(0x4d);
-	radio_tx(0x2d);
-#else
+
+	//gps alt
 	myprintf( altitude, 3 );
 	radio_tx(0x2c);
-	radio_tx(0x4d);
+	radio_tx(0x4d); // M
 	radio_tx(0x2c);
-#endif
+
+	//baometric alt
+	myprintf( sensor->alt, 3 );
+	radio_tx(0x2c);
+
 //	myprintf( usats, 1 );
 //	radio_tx(0x2c);
 //	myprintf( flags, 2 );
@@ -259,6 +252,5 @@ void gps_output(sensor_struct *sensor)
 //	radio_tx(0x2c);
 //	signprintf( sensor->battery, 1 );
 	sendChecksum(1);
-	radio_tx(0x0a);
 }
 

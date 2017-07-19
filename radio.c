@@ -109,10 +109,11 @@ void rtty_tx(char txchar)
 //	lpdelay(); // extra stop bit
 }
 #else
+char gps[128];
+unsigned char gpslen = 0;
 void rtty_tx(char txchar)
 {
-	uart_write(&txchar, 1);
-	lpdelay(); 
+	gps[gpslen++] = txchar;
 }
 #endif
 
@@ -138,6 +139,8 @@ void sendChecksum(short flag)
 	char x,y;
 	if (!flag) {
 		checksum = 0xffff;
+		gpslen = 0;
+		rtty_tx(0x24);
 		return;
 	}
 	y = 16;
@@ -149,5 +152,7 @@ void sendChecksum(short flag)
 		x += 48;
 		rtty_tx( x );
 	}
+	rtty_tx(0x0a);
+	uart_write(&gps[0], gpslen);
 }
 
