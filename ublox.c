@@ -12,15 +12,28 @@
 
 gps_struct gpsdata;
 long utime = 0;
-short lon_sign = 0;
-unsigned short lon_int = 0, lon_dec = 0;
-unsigned short lat_int = 0, lat_dec = 0;
-unsigned short altitude = 0, usats = 0;
+short lon_sign = -1;
+unsigned short lon_int = 4, lon_dec = 120;
+unsigned short lat_int = 51, lat_dec = 060;
+unsigned short altitude = 30, usats = 0;
 char  ufix = 0, upsm = 0, flags=0;
 
 // Need to copy good values before updating
 void gps_process(void)
 {
+	usats = gpsdata.sats;
+	upsm  = (gpsdata.power >> 2) & 0x7;
+	ufix  = gpsdata.fix & 0x7;
+	// last digit for powersave, first digit for fix type
+	// 2x is a 2d fix, 3x is a 3d fix (none,bad,2d,3d,3d+,time only)
+	// y3 is tracking, y4 is lowpower (none,on,active,tracking,low power,inactive)
+	flags = (ufix * 10) + upsm;
+	if (usats < 4){
+		utime ++;
+		if ((utime & 63) > 59)
+			utime -= 60;
+		return;
+	}
 	utime = gpsdata.utc;
 	unsigned long temp;
 	long ulon  = gpsdata.lon;
@@ -61,15 +74,11 @@ void gps_process(void)
 	// Scale to meters (Within accuracy of GPS)
 	ualt >>= 8;
 	ualt *= 2097;
-	altitude = (unsigned short)(ualt >> 13);
-
-	usats = gpsdata.sats;
-	upsm  = (gpsdata.power >> 2) & 0x7;
-	ufix  = gpsdata.fix & 0x7;
-	// last digit for powersave, first digit for fix type
-	// 2x is a 2d fix, 3x is a 3d fix (none,bad,2d,3d,3d+,time only)
-	// y3 is tracking, y4 is lowpower (none,on,active,tracking,low power,inactive)
-	flags = (ufix * 10) + upsm;
+	ualt >>= 13;
+	ualt -= 50; // wgs84 correction for uk
+	if (ualt < 0)
+		ualt = 0;
+	altitude = (unsigned short)ualt;
 }
 
 // Uart 0 on pins E20,E21
@@ -78,18 +87,15 @@ void ublox_init(void)
 	short i;
 	char wakeup = 0xff;
 
-	radio_tx(0x7E);
 	// Ublox needs time to wake up
 	for (i = 0; i < 8; i++) {
 		uart_write( &wakeup, 1);
-		radio_tx(0x30 + i);
 	}
 	setupGPS(); // turn off all strings
-	radio_tx(0x0A);
 	setGPS_PowerManagement();
 
-	// ** rebooting above 12000m needs Flightmode to get lock
-	// setGPS_DynamicMode6();
+	// Pedestrian: above 12000m needs Flightmode to get lock
+	setGPS_DynamicMode3();
 
 	// will not enter Powersave without a lock, try later
 	// setGPS_PowerSaveMode();
@@ -173,10 +179,10 @@ void gps_output(sensor_struct *sensor)
 			setGPS_PowerSaveMode();
 		}
 		// check altitude to set flight mode
-		if (altitude > 2000){
-			//radio_tx(0x46); // F.light
-			setGPS_DynamicMode6();
-		}
+		//if (altitude > 2000){
+		//	radio_tx(0x46); // F.light
+		//	setGPS_DynamicMode6();
+		//}
 		// leave flight mode when good fix on the ground
 		if ((3 == ufix) && (altitude < 1000)){
 			//radio_tx(0x47); //G.round
@@ -235,7 +241,7 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2c);
 
 	//baometric alt
-	myprintf( sensor->alt, 3 );
+	signprintf( sensor->alt, 3 );
 	radio_tx(0x2c);
 
 //	myprintf( usats, 1 );
