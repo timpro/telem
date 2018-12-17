@@ -26,19 +26,19 @@ inline void i2c_give_ack(I2C_MemMapPtr p)   {p->C1 &= ~I2C_C1_TXAK_MASK;}
 inline void i2c_repeated_start(I2C_MemMapPtr p){p->C1     |= I2C_C1_RSTA_MASK;}
 inline uint8_t i2c_read(I2C_MemMapPtr p)    {return p->D;}
 
-inline void i2c_start(I2C_MemMapPtr p)
+static inline void i2c_start(I2C_MemMapPtr p)
 {
     i2c_set_master(p);
     i2c_set_tx(p);
 }
 
-inline void i2c_stop(I2C_MemMapPtr p)
+static inline void i2c_stop(I2C_MemMapPtr p)
 {
     i2c_set_slave(p);
     i2c_set_rx(p);
 }
 
-inline void i2c_wait(I2C_MemMapPtr p)
+static inline void i2c_wait(I2C_MemMapPtr p)
 {
     // Spin wait for the interrupt flag to be set
     while((p->S & I2C_S_IICIF_MASK) == 0)
@@ -47,7 +47,7 @@ inline void i2c_wait(I2C_MemMapPtr p)
     p->S |= I2C_S_IICIF_MASK;           // Clear flag
 }
 
-inline int i2c_write(I2C_MemMapPtr p, uint8_t data)
+static inline int i2c_write(I2C_MemMapPtr p, uint8_t data)
 {
     // Send data, wait, and return ACK status
     p->D = data;
@@ -55,7 +55,7 @@ inline int i2c_write(I2C_MemMapPtr p, uint8_t data)
     return ((p->S & I2C_S_RXAK_MASK) == 0);
 }
 
-inline void i2c_init(I2C_MemMapPtr p)
+static inline void i2c_init(I2C_MemMapPtr p)
 {
     // Enable clocks
     SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;      

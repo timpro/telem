@@ -166,7 +166,7 @@ void gps_output(sensor_struct *sensor)
 			setGPS_DynamicMode3();
 	}
 // binary
-#if 1
+#if 0
         bindata.PayloadType = 0x80;
         bindata.PayloadID = 0x17;
         bindata.Counter = seq++;
@@ -181,7 +181,7 @@ void gps_output(sensor_struct *sensor)
 
 // normal
 #if 1
-	rtty_tx("MAGNU\n");
+	radio_tx(0x0A);//\n
 	radio_tx(0x24);//$
 	radio_tx(0x24);//$
 	sendChecksum(0);
@@ -196,9 +196,9 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2c);
 
 	myprintf( (char)(utime>>16)&31,2 );
-	radio_tx(0x3a);
+	// radio_tx(0x3a);
 	myprintf( (char)(utime>>8)&63, 2 );
-	radio_tx(0x3a);
+	// radio_tx(0x3a);
 	myprintf( (char)(utime>>0)&63, 2 );
 	radio_tx(0x2c);
 
@@ -217,7 +217,7 @@ void gps_output(sensor_struct *sensor)
 	radio_tx(0x2c);
 	myprintf( usats, 1 );
 	radio_tx(0x2c);
-	myprintf( flags, 2 );
+	myprintf( get_count(), 2 );
 	radio_tx(0x2c);
 	myprintf( sensor->force, 1 );
 	radio_tx(0x2c);

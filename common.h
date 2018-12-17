@@ -62,7 +62,7 @@ void hal_i2c_deinit(I2C_MemMapPtr p);
 void rfm98_init(void);
 void lora_init(void);
 void lora_call(void);
-void rtty_tx(char* message);
+void fsk_tx(char* message);
 void lora_tx(char* message);
 short rfm98_temp(void);
 void radio_tx(char c);
@@ -93,6 +93,7 @@ void uart_init(int baud_rate);
 void lpdelay_init(void);
 void lpdelay(void);
 void delay(short ms);
+int get_count(void);
 
 // From accel.c
 void accel_init(void);

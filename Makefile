@@ -19,7 +19,7 @@ CFLAGS = -ffunction-sections -fdata-sections -Wall -Wa,-adhlns="$@.lst" \
 		 -fmessage-length=0 $(TARGET) -mthumb -mfloat-abi=soft \
 		 $(DEBUG_OPTS) $(OPTS) -I .
 
-LIBOBJS = _startup.o syscalls.o uart.o delay.o  ublox.o\
+LIBOBJS = _startup.o syscalls.o uart.o delay.o  ublox.o contestia.o \
 		ring.o tests.o math.o accel8451.o rfm98.o
 
 INCLUDES = common.h

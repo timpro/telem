@@ -1,5 +1,6 @@
 /* (C) 2015 John Greb, MIT Lience */
 #include "common.h"
+#include "contestia.h"
 
 // to write data set Address MSB High
 #define SET_MODE (0x81)
@@ -130,7 +131,7 @@ short rfm98_temp(void)
 	return 15 - (int8_t)(uint8_t)rfm_temp;
 }
 
-void rtty_config(void)
+void fsk_config(void)
 {
 	lpdelay();
 	spi_rw(SET_MODE, 0);	 // sleep
@@ -138,10 +139,10 @@ void rtty_config(void)
 	spi_rw(SET_MODE, 1); // standby
 	lpdelay();
 
-	//bitrate = 800, divided to 100
-	spi_rw(0x80|REG_BITRATE_LSB,0x40);
-	spi_rw(0x80|REG_BITRATE_MSB,0x9c);
-	spi_rw(0x80|REG_FDEV_LSB, 7); // half shift == deviation, min 600Hz 
+	//bitrate = 500, divided to 125
+	spi_rw(0x80|REG_BITRATE_LSB,0x00);
+	spi_rw(0x80|REG_BITRATE_MSB,0xFA);
+	spi_rw(0x80|REG_FDEV_LSB, 1); // half shift == deviation, 61Hz steps 
 	spi_rw(0x80|REG_FDEV_MSB, 0);
 	spi_rw(0x80|REG_PREAMBLE_LSB_FSK, 8);
 	// spi_rw(0x80|REG_PREAMBLE_MSB_FSK, 0;
@@ -165,28 +166,27 @@ void rtty_config(void)
 	spi_rw(0x80|REG_PA_CONFIG, 0x82); // low power
 }
 
-// 8n1
-void char2rtty(char c)
+void char2radio(char c)
 {
 	short i, b;
 
-	spi_rw(0x80, 0x00); // start bit
-	// for (i = 0; i < 8; i++) {
-	for (i = 0; i < 7; i++) {
-		b = 256 - (c & 1); // LSB in, 8 bits (MSB) out
-		spi_rw(0x80, b & 0xff); // push to buffer
+	for (i = 0; i < 4; i++) {
+		b = 0xf0 & (256 - (c & 1)); // LSB in, 4 bits (MSB) out
 		c >>= 1;
+		b += 0x0f & (256 - (c & 1));
+		c >>= 1;	
+		spi_rw(0x80, b & 0xff); // push to buffer
 	}
-	spi_rw(0x80, 0xff); // stop bit
 }
 
-void rtty_tx(char* message)
+char tones[8]; // 64bits for Oliva
+void fsk_tx(char* message)
 {
-	int i;
+	int i, t;
 
 	spi_rw(SET_MODE, 0); // sleep
         lpdelay();
-        spi_rw(SET_MODE, 0); // not lora
+        spi_rw(SET_MODE, 0); // standby
         lpdelay();
 
         // 434.400 MHz
@@ -204,26 +204,28 @@ void rtty_tx(char* message)
 
 	// preamble (max 64 bytes)
 	for (i = 0; i < 12; i++)
-		spi_rw(0x80, 0x00); // start bits
+		spi_rw(0x80, 0x03); // start bits
 	for (i = 0; i < 12; i++)
-		spi_rw(0x80, 0xff); // stop bits
+		spi_rw(0x80, 0x3f); // stop bits
 	spi_rw(SET_MODE, 0x43); // start transmitting
 
-	for (i = 0; i < 255; i++) { // set MAXIMUM chars to transmit
+	for (i = 0; i < 120; i++) { // set MAXIMUM chars to transmit
+		if (0 == message[i]) break; // dont send trailing zero after message
+		contestia_block(&message[i], tones);
 
-		// fifo threshold is 16 bytes, 150ms at 800 baud
-		while ( spi_rw(REG_IRQ_FLAGS2, 0) & (1<<5) )
-			delay(50);	// buffer full enough
-
-		char2rtty( message[i] );
-		if (0 == message[i]) break; // send trailing zero after message
+		// fifo threshold is 16 bytes, 250ms at 500 baud
+		for (t = 0; t < 4; t++) { // 4 contestia or 8 olivia
+			while ( spi_rw(REG_IRQ_FLAGS2, 0) & (1<<5) )
+				lpdelay();	// buffer full enough
+			char2radio( tones[t] );	
+		}
 	}
 	rfm_temp = spi_rw(0x3c, 0x00);
 
 	while (!( spi_rw(REG_IRQ_FLAGS2, 0) & (1<<6) ))
-		delay(50);	// buffer still not empty
-	delay(50);
-	spi_rw(SET_MODE, 0x40); // rtty sleep
+		lpdelay();	// buffer still not empty
+	lpdelay();
+	spi_rw(SET_MODE, 0x0); // fsk sleep
 }
 
 #define BANDWIDTH_7K8	(0x00)
@@ -303,7 +305,7 @@ void rfm98_init(void)
 
 	GPIOD_PCOR = xCLOCK; // clock low
 
-	rtty_config();
+	fsk_config();
 }
 
 const char callmess[] = {"^MAGNU,434.4,0,6,64,144,8\n"};
@@ -442,12 +444,12 @@ void sendChecksum(short flag)
         }
 	radio_tx( 10 );
 	radio_tx( 0 );
-	//if (1 & skip++)
-		rtty_tx(tx_msg);
-	// else if (!(skip & 7))
+	if (1 & skip++)
+		fsk_tx(tx_msg);
+	//else if (!(skip & 7))
 	//	lora_call();
-	//else
-	//	lora_tx(tx_msg);
+	else
+		lora_tx(tx_msg);
 	tx_ptr = 0;
 }
 

@@ -4,7 +4,7 @@
 
 // 1 second delay between data fetches
 // internal clock is 9% adrift 
-#define BAUD_MS 300
+#define BAUD_MS 100
 
 // The basic delay(ms) is used to blink the LED for System Errors
 // and for short i2c delays. It is not time critical
@@ -19,15 +19,18 @@ void delay(short length_ms)
     }
 }
 
+int lpt_count = 0;
+int get_count(void)
+{ return lpt_count; }
 
 // Timer interrupt handler
-volatile short lpt_flag = 0;
+volatile int lpt_flag = 0;
 void LPTimer_IRQHandler()
 {
     LPTMR0_CSR |=  LPTMR_CSR_TCF_MASK;   // clear the LPT timer compare flag
     LPTMR0_CMR = BAUD_MS;
     LPTMR0_CSR = ( LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK);
-    lpt_flag = 1;
+    lpt_flag++;
 }
 
 // Halt CPU between timer interrupts for maximum powersave
@@ -50,5 +53,6 @@ void lpdelay(void)
      __asm volatile("wfi"); /* wait for interrupt */
      __asm volatile("isb");
     }
+    lpt_count += lpt_flag;
     lpt_flag = 0; // clear flag until next interrupt
-}
+} 
