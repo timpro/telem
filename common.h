@@ -5,17 +5,19 @@
 #include "MKL25Z4.h"
 
 // core clock for Uart -- check against _startup settings
-#define CORE_CLOCK (21000000)
+#define CORE_CLOCK (24000000)
 
-// millisecond delay for Tx Baud rate, 20ms for  RTTY50, 128/93/64ms for DominoEx8/11/16 
-// - value needs to be one less than intended delay, and 5% less
-// 18 for 50Hz, 20 for 45Hz
-#define BAUD_MS (18)
+static inline void RGB_LED(int red, int green, int blue) {
+  TPM2_C0V  = red;
+  TPM2_C1V  = green;
+//  TPM0_C1V  = blue;
+}
+
 
 typedef struct {
   unsigned short force;
   short compass;
-  unsigned short pressure;
+//  unsigned short pressure;
   short temperature;
   short battery;
 } sensor_struct;
@@ -30,6 +32,21 @@ typedef struct {
   char  fix;
 } gps_struct;
 
+typedef struct {
+        uint8_t         PayloadType;
+        uint8_t         PayloadID;
+        uint16_t        Counter;
+        uint16_t        BiSeconds;
+        uint16_t	Latlow;
+	int16_t		Lathigh;
+        uint16_t 	Longlow;
+	int16_t		Longhigh;
+        uint16_t        Altitude;
+	uint8_t		Fix;
+	int8_t		Temperature;
+	uint16_t	Checksum;
+} bin_struct;
+
 // Memory locations defined by the linker
 extern uint32_t __heap_start[];
 extern uint32_t __StackTop[];
@@ -41,6 +58,23 @@ extern uint32_t __etext[];                // End of code/flash
 void hal_i2c_init(I2C_MemMapPtr p);
 void hal_i2c_deinit(I2C_MemMapPtr p);
 
+// From rfm98.c
+void rfm98_init(void);
+void lora_init(void);
+void lora_call(void);
+void rtty_tx(char* message);
+void lora_tx(char* message);
+short rfm98_temp(void);
+void radio_tx(char c);
+
+// From spi.c
+void spi_init(void);
+uint8_t spi_status(void);
+uint8_t spi_single(uint8_t addr, uint8_t data);
+void spi_write(uint8_t* p, uint8_t size, uint8_t addr);
+void spi_read(uint8_t* p, uint8_t size, uint8_t addr);
+void SPI0_IRQHandler(void) __attribute__((interrupt("IRQ")));
+
 // From math.c
 unsigned short magnitude(short x, short y, short z);
 short sine(short angle);
@@ -50,7 +84,7 @@ short upness(short x, short y, short z);
 short findArcsin( short scalar, unsigned short mag );
 
 // From uart.c
-void UART0_IRQHandler() __attribute__((interrupt("IRQ")));
+void UART1_IRQHandler() __attribute__((interrupt("IRQ")));
 short uart_write(char *p, short len);
 short uart_read(char *p, short len);
 void uart_init(int baud_rate);

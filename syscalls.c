@@ -5,7 +5,6 @@
 //  <andy@payne.org>
 //
 
-#include <freedom.h>
 #include <sys/stat.h>
 #include "common.h"
 
@@ -21,10 +20,15 @@ int _fstat(int file, struct stat *st)
 
 int _write(int file, char *p, int len)
 {
-//     return uart_write(p,len);   // stdout
-	short i;
-	for ( i=0; i<len; i++) radio_tx(*p++);
-	return len;
+#if 0
+    switch(file) {
+     case 1:        return uart_write(p, len);              // stdout
+     case 2:        return uart_write_err(p,len);           // stderr
+     default:       return -1;
+    }
+#else
+     return -1;
+#endif
 }
 
 int _read(int file, char *p, int len)

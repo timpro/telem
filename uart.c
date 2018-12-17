@@ -15,9 +15,10 @@ static RingBuffer *const tx_buffer = (RingBuffer *) &_tx_buffer;
 //static RingBuffer *const rx_buffer = (RingBuffer *) &_rx_buffer;
 
 // Buffers for Ublox replies
-char NAV_PVT[92];  //everything you need in one function.
-	//    0xB5, 0x62, 0x01, 0x07, 0x54, 0x00,             // 6 header,
-	//    ....        0x00, 0x00 };          //  + 84 bytes + 2 checksum
+char NAV_PVT[92 + 8];  //everything you need in one function.
+	// MAX M8 version has 8 extra bytes
+	//    0xB5, 0x62, 0x01, 0x07, 0x54+8, 0x00,             // 6 header,
+	//    ....        0x00, 0x00 };          //  + 84 bytes + 8 + 2 checksum
 // Ack/Nak are mostly useful for debugging, we don`t need to check those.
 // We do need to know that we are in flight mode, and NMEA strings are off
 // - but it is as easy to re-send the command as it is to check current status.
@@ -37,11 +38,11 @@ char NAV_PVT[92];  //everything you need in one function.
  */
 short pos = 0;
 short count = 0;
-void __attribute__((interrupt("IRQ"))) UART0_IRQHandler()
+void __attribute__((interrupt("IRQ"))) UART1_IRQHandler()
 {
     uint8_t status;
     uint8_t inbyte;
-    status = UART0_S1;
+    status = UART1_S1;
     
     // If transmit data register empty, and data in the transmit buffer,
     // send it.  If it leaves the buffer empty, disable the transmit interrupt.
@@ -52,15 +53,15 @@ void __attribute__((interrupt("IRQ"))) UART0_IRQHandler()
     // Should be little chance of overlap, after startup sequence. 
 
     if ((status & UART_S1_TDRE_MASK) && !buf_isempty(tx_buffer)) {
-        UART0_D = buf_get_byte(tx_buffer);
-        if(buf_isempty(tx_buffer))
-            UART0_C2 &= ~UART_C2_TIE_MASK;
+        UART1_D = buf_get_byte(tx_buffer);
+       if(buf_isempty(tx_buffer))
+            UART1_C2 &= ~UART_C2_TIE_MASK;
     }
 
     // If there is received data, process it. Interrupts are NOT disabled, be quick 
     if ( status & UART_S1_RDRF_MASK ) {
-        inbyte = UART0_D;
-        //UART0_C2 &= ~UART_C2_RIE_MASK;
+        inbyte = UART1_D;
+        //UART1_C2 &= ~UART_C2_RIE_MASK;
 	switch (pos) {
 		case 0: if (0xB5 == inbyte) pos++;
 			break;
@@ -73,7 +74,7 @@ void __attribute__((interrupt("IRQ"))) UART0_IRQHandler()
 		case 3: if (0x07 == inbyte) pos++;
 			  else pos = 0;
 			break;
-		case 4: if (0x54 == inbyte) pos++;
+		case 4: if ((0x54 + 8)== inbyte) pos++;
 			  else pos = 0;
 			break;
 		case 5: if (0x00 == inbyte) {
@@ -82,7 +83,7 @@ void __attribute__((interrupt("IRQ"))) UART0_IRQHandler()
 			} else pos = 0;
 			break;
 		case 6: NAV_PVT[count++] = inbyte;
-			if (count >= 86) pos = 0;
+			if (count >= 86 + 8) pos = 0;
 			break;
 		default:pos = 0;
 			break;
@@ -97,8 +98,8 @@ short ublox_update(gps_struct *gpsdata)
 	short i;
 	char  chk0, chk1, chka, chkb;
 	// copy checksum first in case buffer is updating while we are reading
-	chka =  NAV_PVT[84];
-	chkb =  NAV_PVT[85];
+	chka =  NAV_PVT[84 + 8];
+	chkb =  NAV_PVT[85 + 8];
 	// then copy all wanted data
 	gpsdata->utc = (0 | NAV_PVT[8]<<16 | NAV_PVT[9]<<8 | NAV_PVT[10]<<0);
 	gpsdata->lon = (0 | NAV_PVT[25]<< 8 | NAV_PVT[26] << 16 | NAV_PVT[27] << 24);
@@ -112,10 +113,10 @@ short ublox_update(gps_struct *gpsdata)
 	// 0x01075400 header +84 data bytes
 	chk0 = 0x08;
 	chk1 = 0x09;
-	chk0 += 0x54;
+	chk0 += 0x54+8;
 	chk1 += chk0;
 	chk1 += chk0;
-	for (i = 0; i < 84; i++)
+	for (i = 0; i < 84 + 8; i++)
 	{
 		chk0 += NAV_PVT[i];
 		chk1 += chk0;
@@ -132,12 +133,12 @@ short uart_write(char *p, short len)
     for(i=0; i<len; i++) {
         if (buf_isfull(tx_buffer)) {
 			// Abort if buffer is full - should never happen
-		UART0_C2 |= UART_C2_TIE_MASK;
+		UART1_C2 |= UART_C2_TIE_MASK;
 		return i;
 	}
         buf_put_byte(tx_buffer, *p++);
     }
-    UART0_C2 |= UART_C2_TIE_MASK;  // Turn on Tx interrupts at end of buffer fill
+    UART1_C2 |= UART_C2_TIE_MASK;  // Turn on Tx interrupts at end of buffer fill
     return len;
 }
 
@@ -149,7 +150,7 @@ short uart_read(char *p, short len)
         if (buf_isempty(rx_buffer)) return (len -i); // Do not wait
 
         *p++ = buf_get_byte(rx_buffer);
-        UART0_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt
+        UART1_C2 |= UART_C2_RIE_MASK;           // Turn on Rx interrupt
         i--;
     }
 #endif
@@ -157,47 +158,50 @@ short uart_read(char *p, short len)
 }
 
 //
-// uart_init() -- Initialize debug / OpenSDA UART0
+// uart_init() -- Initialize debug / OpenSDA UART1
 //
 //      The OpenSDA UART RX/TX is connected to pins 27/28, PTA1/PTA2 (ALT2)
-//
+//	UART1 is on PTE0/PTE1
 void uart_init(int baud_rate)
 {
     // Use Port A for USB debug, Port E for gps
     SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK;
     SIM_SCGC5 |= SIM_SCGC5_PORTE_MASK;
 
-    // Turn on clock to UART0 module and select 48Mhz clock (FLL/PLL source)
-    SIM_SCGC4 |= SIM_SCGC4_UART0_MASK;
+    // Turn on clock to UART1 module and select 48Mhz clock (FLL/PLL source)
+    SIM_SCGC4 |= SIM_SCGC4_UART1_MASK;
+
+    // UART0 clock source - 
     SIM_SOPT2 &= ~SIM_SOPT2_UART0SRC_MASK;
     SIM_SOPT2 |= SIM_SOPT2_UART0SRC(1);                 // FLL/PLL source
 
     // Select "Alt 1" to disable OpenSDA from uart
-    PORTA_PCR1 = PORT_PCR_MUX(1); //rx
-    PORTA_PCR2 = PORT_PCR_MUX(1); //tx
+    //PORTA_PCR1 = PORT_PCR_MUX(1); //rx
+    //PORTA_PCR2 = PORT_PCR_MUX(1); //tx
 
-    // Use Uart0 GPS insted
-    PORTE_PCR21 = PORT_PCR_MUX(4); // uart tx, gps rx
-    PORTE_PCR20 = PORT_PCR_MUX(4); // uart rx, gps tx
+    // Use Uart1 GPS insted
+    PORTE_PCR1 = PORT_PCR_MUX(3); // gps rx
+    PORTE_PCR0 = PORT_PCR_MUX(3); // gps tx
 
 
-    UART0_C2 = 0;
-    UART0_C1 = 0;
-    UART0_C3 = 0;
-    UART0_S2 = 0;     
+    UART1_C2 = 0;
+    UART1_C1 = 0;
+    UART1_C3 = 0;
+    UART1_S2 = 0;     
 
     // Set the baud rate divisor
     #define OVER_SAMPLE 16
-    uint16_t divisor = (CORE_CLOCK / OVER_SAMPLE) / baud_rate;
-    UART0_C4 = UARTLP_C4_OSR(OVER_SAMPLE - 1);
-    UART0_BDH = (divisor >> 8) & UARTLP_BDH_SBR_MASK;
-    UART0_BDL = (divisor & UARTLP_BDL_SBR_MASK);
+    uint16_t divisor = CORE_CLOCK / (OVER_SAMPLE * baud_rate);
+
+    //UART1_C4 = UARTLP_C4_OSR(OVER_SAMPLE - 1);
+    UART1_BDH = (divisor >> 8) & UARTLP_BDH_SBR_MASK;
+    UART1_BDL = (divisor & UARTLP_BDL_SBR_MASK);
 
     // Initialize transmit and receive circular buffers
     buf_reset(tx_buffer, BUFFSIZE);
     //buf_reset(rx_buffer, BUFFSIZE);
 
     // Enable the transmitter, receiver, and receive interrupts
-    UART0_C2 = UARTLP_C2_RE_MASK | UARTLP_C2_TE_MASK | UART_C2_RIE_MASK;
-    enable_irq(INT_UART0);
+    UART1_C2 = UARTLP_C2_RE_MASK | UARTLP_C2_TE_MASK | UART_C2_RIE_MASK;
+    enable_irq(INT_UART1);
 }

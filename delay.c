@@ -1,11 +1,13 @@
 // (c) John Greb, MIT License.
 
-#include <freedom.h>
 #include "common.h"
+
+// 1 second delay between data fetches
+// internal clock is 9% adrift 
+#define BAUD_MS 300
 
 // The basic delay(ms) is used to blink the LED for System Errors
 // and for short i2c delays. It is not time critical
-// DominoEx or RTTY needs regular interrupts from the low power timer
 
 // inaccurate busy wait
 void delay(short length_ms)

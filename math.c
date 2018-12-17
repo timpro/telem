@@ -85,10 +85,7 @@ short findArctan( short x, short y, short z)
 			else uy = y;
 	} else uy = magnitude( y, z, 0);
 
-	if ( 0 == uy) { // avoid divide by zero
-		if (x < 0) return 180;
-		else return 0;
-		}
+	if ( 0 == uy) return 0; // avoid divide by zero
 	if ( uy >= ux ) {
 		tangent = ((int)ux <<6) /uy;
 		result = 90 - arctan[ tangent ];

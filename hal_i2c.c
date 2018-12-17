@@ -1,8 +1,7 @@
 // File from element14 EVK sensors example code - no rights reserved
 
-#include "hal_i2c.h"
 #include "common.h"
-
+#include "hal_i2c.h"
 
 void i2c_set_tx_mode(I2C_MemMapPtr p)
 {

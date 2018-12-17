@@ -1,25 +1,9 @@
-HAB Branch
-==========
+Forked from payne92 to add a new demo.
 
-Long distance telemetry, transmitted by FSK 434MHz USB FM:
+Branches added for extra Hardware support for EVK add-on board, and kl26z upgraded board.
 
-1) Ublox GPS on Uart 0 at 9600 baud.
-2) NTX2B radio driven with 12 bit DAC
-3) Battery Volts read with 12 bit ADC
-
-The onboard regulator can be replaced with a 2.0V version for reduced power consumption. The external Crystal is disabled and clock speeds are divided down to 5.2MHz CPU, 1.3MHz bus. With DominoEx8 transmission the CPU only needs to be awake for a few cycles every second, waking on interrupts from the Uart or 8Hz timer.
-
-Designed for 3 AAA batteries giving 24mA for 24Hrs at 24C: NTX2B needs 10 mA at over 3V; a 2V LDO regulator needs over 3V and wastes 4mA; the Ublox MAX-7C needs over 1.8V and 7mA  in full powersaving mode with a good signal, much more current when hunting satellites.
-
-
-EVK Branch
-==========
-
-Adding support for Xtrinsic EVK sensors Pack:
-
-1) MMA8491Q Accelerometer.
-2) MPL3115A Barometer.
-3) MAG3110  Magnetometer.
+Added a branch with a simple demo to read the temperature on a HopeRF RFM98.
+SPI support clashes with blue LED on PTD1 (arduino D13), so wired through PTD0,PTC5,PTD2,PTD3.
 
 Bare Metal Arm
 ==============
@@ -29,7 +13,7 @@ This is a "bare metal" runtime for the
 ARM development board ($13). It builds with the GCC ARM toolchain, with no other external dependencies. 
 
 Quick start on Linux or Mac OS X:
-* Clone the repo: `git clone https://github.com/payne92/bare-metal-arm.git`
+* Clone the repo: `git clone https://github.com/hexameron/bare-metal-arm.git`
 * Grab and unpack GCC ARM toolchain: `cd bare-metal-arm; make gcc-arm`
 * `make`
 

@@ -19,22 +19,22 @@ CFLAGS = -ffunction-sections -fdata-sections -Wall -Wa,-adhlns="$@.lst" \
 		 -fmessage-length=0 $(TARGET) -mthumb -mfloat-abi=soft \
 		 $(DEBUG_OPTS) $(OPTS) -I .
 
-LIBEXTRA = accel8491.o baro3115.o mag3110.o ublox.o radio.o math.o
-LIBOBJS = _startup.o syscalls.o uart.o delay.o hal_i2c.o ring.o $(LIBEXTRA)
+LIBOBJS = _startup.o syscalls.o uart.o delay.o  ublox.o\
+		ring.o tests.o math.o accel8451.o rfm98.o
 
-INCLUDES = freedom.h common.h
+INCLUDES = common.h
 
 .PHONY:	clean gcc-arm deploy
 
 # -----------------------------------------------------------------------------
 
-all: project.S19 project.dump
+all: project.S19
 
 libbare.a: $(LIBOBJS)
 	$(AR) -rv libbare.a $(LIBOBJS)
 
 clean:
-	rm -f *.o *.lst *.out libbare.a *.s19 *.dump
+	rm -f *.o *.lst *.out libbare.a *.srec *.dump
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
@@ -53,7 +53,7 @@ clean:
 #  Hack:  we identify the board by the filesystem size (128mb)
 DEPLOY_VOLUME = $(shell df -h 2>/dev/null | fgrep " 128M" | awk '{print $$6}')
 deploy: project.S19
-	dd conv=fsync bs=4k if=$< of=$(DEPLOY_VOLUME)/$<
+	dd conv=fsync bs=64k if=$< of=$(DEPLOY_VOLUME)/$<
 	
 # -----------------------------------------------------------------------------
 # Download and unpack the GCC ARM embedded toolchain (binaries)
